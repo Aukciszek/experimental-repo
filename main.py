@@ -105,6 +105,93 @@ def reconstruct_secret(shares, coefficients, t):
     return secret
 
 
+def modular_multiplicative_inverse(b: int, n: int) -> int:
+    A = n
+    B = b
+    U = 0
+    V = 1
+    while B != 0:
+        q = A // B
+        A, B = B, A - q * B
+        U, V = V, U - q * V
+    if U < 0:
+        return U + n
+    return U
+
+
+def inverse_matrix_mod(matrix, modulus):
+    n = len(matrix)
+    identity_matrix = [[1 if i == j else 0 for j in range(n)] for i in range(n)]
+
+    for i in range(n):
+        # Find the first non-zero element in column i starting from row i
+        non_zero_index = next(
+            (k for k in range(i, n) if matrix[k][i] % modulus != 0), -1
+        )
+        if non_zero_index == -1:
+            raise ValueError("Matrix is not invertible under this modulus.")
+
+        # Swap rows i and non_zero_index in both matrix and identity_matrix
+        matrix[i], matrix[non_zero_index] = matrix[non_zero_index], matrix[i]
+        identity_matrix[i], identity_matrix[non_zero_index] = (
+            identity_matrix[non_zero_index],
+            identity_matrix[i],
+        )
+
+        # Normalize the pivot row
+        pivot = matrix[i][i] % modulus
+        pivot_inv = modular_multiplicative_inverse(pivot, modulus)
+
+        matrix[i] = [(x * pivot_inv) % modulus for x in matrix[i]]
+        identity_matrix[i] = [(x * pivot_inv) % modulus for x in identity_matrix[i]]
+
+        # Eliminate entries below the pivot
+        for j in range(i + 1, n):
+            if matrix[j][i] % modulus != 0:
+                factor = matrix[j][i]
+                matrix[j] = [
+                    (matrix[j][k] - factor * matrix[i][k]) % modulus for k in range(n)
+                ]
+                identity_matrix[j] = [
+                    (identity_matrix[j][k] - factor * identity_matrix[i][k]) % modulus
+                    for k in range(n)
+                ]
+
+    # Back substitution to eliminate entries above the pivots
+    for i in range(n - 1, -1, -1):
+        for j in range(i - 1, -1, -1):
+            if matrix[j][i] % modulus != 0:
+                factor = matrix[j][i]
+                matrix[j] = [
+                    (matrix[j][k] - factor * matrix[i][k]) % modulus for k in range(n)
+                ]
+                identity_matrix[j] = [
+                    (identity_matrix[j][k] - factor * identity_matrix[i][k]) % modulus
+                    for k in range(n)
+                ]
+
+    return identity_matrix
+
+
+def multiply_matrix(matrix1, matrix2, modulus):
+    n = len(matrix1)
+    m = len(matrix2[0])
+    l = len(matrix2)
+
+    if len(matrix1[0]) != l:
+        raise ValueError("Matrix dimensions do not match.")
+
+    result = [[0 for _ in range(m)] for _ in range(n)]
+
+    for i in range(n):
+        for j in range(m):
+            result[i][j] = (
+                sum(matrix1[i][k] * matrix2[k][j] % modulus for k in range(l)) % modulus
+            )
+
+    return result
+
+
 def main():
     t = 2
     n = 2
@@ -126,6 +213,18 @@ def main():
     print("secret = ", secret % p)
 
     assert k0 == round(secret % p)
+
+    matrix = [[2, 4], [3, 5]]
+    modulus = 7
+
+    inverse = inverse_matrix_mod(matrix, modulus)
+    print(inverse)
+
+    matrix1 = [[1, 2], [3, 4]]
+    matrix2 = [[5, 6], [7, 8]]
+
+    result = multiply_matrix(matrix1, matrix2, 7)
+    print(result)
 
 
 if __name__ == "__main__":
