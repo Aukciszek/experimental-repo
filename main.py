@@ -296,9 +296,12 @@ def main():
     # Shamir's secret sharing
     t = 2
     n = 5
-    first_shares, p = Shamir(t, n, 3)  # First client
-    second_shares, _ = Shamir(t, n, 4)  # Second client
-    third_shares, _ = Shamir(t, n, 5)  # Third client
+    first_secret = 3
+    second_secret = 4
+    third_secret = 5
+    first_shares, p = Shamir(t, n, first_secret)  # First client
+    second_shares, _ = Shamir(t, n, second_secret)  # Second client
+    third_shares, _ = Shamir(t, n, third_secret)  # Third client
 
     print("shares_1 = ", first_shares)
     print("shares_2 = ", second_shares)
@@ -366,7 +369,7 @@ def main():
 
     print("secret = ", secret % p)
 
-    assert (3 * 4) % p == round(secret % p)
+    assert (first_secret * second_secret) % p == round(secret % p)
 
     # Reset the parties
     for i in range(n):
@@ -412,7 +415,7 @@ def main():
 
     print("secret = ", secret % p)
 
-    assert (4 * 5) % p == round(secret % p)
+    assert (second_secret * third_secret) % p == round(secret % p)
 
 
 if __name__ == "__main__":
