@@ -9,9 +9,9 @@ async def main():
     my_age = int(input("Enter your age: "))
     our_ages = mpc.input(secint(my_age))
 
-    max_age = mpc.min(our_ages)
+    min_age = mpc.min(our_ages)
 
-    print("Minimum age:", await mpc.output(max_age))
+    print("Minimum age:", await mpc.output(min_age))
 
     await mpc.shutdown()
 
