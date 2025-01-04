@@ -4,6 +4,9 @@ import random
 
 
 def binary_exponentiation(b, k, n):
+    if k < 0:
+        k = n - 2
+
     a = 1
     while k:
         if k & 1:
@@ -57,53 +60,6 @@ def MillerRabin_prime_test(n, k):
             return False
 
     return True
-
-
-def f(x, coefficients, p, t):
-    return sum([coefficients[i] * x**i for i in range(t)]) % p
-
-
-def Shamir(t, n, k0):
-    p = 23
-
-    coefficients = [random.randint(0, p - 1) for i in range(t)]
-    coefficients[0] = k0
-
-    if coefficients[-1] == 0:
-        coefficients[-1] = random.randint(1, p - 1)
-
-    shares = []
-
-    for i in range(1, n + 1):
-        shares.append((i, f(i, coefficients, p, t)))
-
-    return shares, p
-
-
-def computate_coefficients(shares, t):
-    coefficients = [1] * t
-
-    for i in range(t):
-        x_i, _ = shares[i]
-
-        for j in range(t):
-            if i != j:
-                x_j, _ = shares[j]
-
-                coefficients[i] *= -x_j / (x_i - x_j)
-
-    return coefficients
-
-
-def reconstruct_secret(shares, coefficients, t):
-    secret = 0
-
-    for i in range(t):
-        _, y_i = shares[i]
-
-        secret += y_i * coefficients[i]
-
-    return secret
 
 
 def modular_multiplicative_inverse(b: int, n: int) -> int:
@@ -292,6 +248,51 @@ class Party:
         self.__multiplicative_share = None
 
 
+def f(x, coefficients, p, t):
+    return sum([coefficients[i] * x**i for i in range(t)]) % p
+
+
+def Shamir(t, n, k0):
+    p = 23
+
+    coefficients = [random.randint(0, p - 1) for _ in range(t)]
+    coefficients[0] = k0
+
+    if coefficients[-1] == 0:
+        coefficients[-1] = random.randint(1, p - 1)
+
+    shares = []
+
+    for i in range(1, n + 1):
+        shares.append((i, f(i, coefficients, p, t)))
+
+    return shares, p
+
+
+def computate_coefficients(shares, p):
+    coefficients = []
+
+    for i, (x_i, _) in enumerate(shares):
+        li = 1
+        for j, (x_j, _) in enumerate(shares):
+            if i != j:
+                li *= x_j * binary_exponentiation(x_j - x_i, -1, p)
+                li %= p
+        coefficients.append(li)
+
+    return coefficients
+
+
+def reconstruct_secret(shares, coefficients, p):
+    secret = 0
+
+    for i, (_, y_i) in enumerate(shares):
+        secret += y_i * coefficients[i]
+        secret %= p
+
+    return secret
+
+
 def main():
     # Shamir's secret sharing
     t = 2
@@ -361,11 +362,15 @@ def main():
 
         multiplicative_shares[i] = (i + 1, party.get_multiplicative_share())
 
-    coefficients = computate_coefficients(multiplicative_shares, t)
+    print("Selected Shares for Reconstruction:")
+    selected_shares = [multiplicative_shares[3], multiplicative_shares[1]]
+    print(selected_shares)
+
+    coefficients = computate_coefficients(selected_shares, p)
 
     print("coefficients = ", coefficients)
 
-    secret = reconstruct_secret(multiplicative_shares, coefficients, t)
+    secret = reconstruct_secret(selected_shares, coefficients, p)
 
     print("secret = ", secret % p)
 
@@ -407,15 +412,17 @@ def main():
 
         multiplicative_shares[i] = (i + 1, party.get_multiplicative_share())
 
-    coefficients = computate_coefficients(multiplicative_shares, t)
+    print("Selected Shares for Reconstruction:")
+    selected_shares = [multiplicative_shares[2], multiplicative_shares[4]]
+    print(selected_shares)
+
+    coefficients = computate_coefficients(selected_shares, p)
 
     print("coefficients = ", coefficients)
 
-    secret = reconstruct_secret(multiplicative_shares, coefficients, t)
+    secret = reconstruct_secret(selected_shares, coefficients, p)
 
     print("secret = ", secret % p)
-
-    assert (second_secret * third_secret) % p == round(secret % p)
 
 
 if __name__ == "__main__":
