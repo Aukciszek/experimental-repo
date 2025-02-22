@@ -167,9 +167,12 @@ class Party:
         self.__p = p
         self.__parties = None
         self.__A = None
+        self.__q = None # to co sam losuje
+        self.__shared_q = [None] * n    # to co dostaje od innych
         self.__r = None
         self.__shared_r = [None] * n
         self.__multiplicative_share = None
+        self.__additive_share = None
 
     def set_shares(self, client_id, share):
         self.__client_shares.append((client_id, share))
@@ -182,6 +185,22 @@ class Party:
             raise ValueError("Invalid number of parties.")
 
         self.__parties = parties
+    
+    def calculate_additive_share(self, first_client_id, second_client_id):
+        if self.__additive_share is not None:
+            raise ValueError("Coefficient already calculated.")
+        
+        first_client_share = next(
+            (y for x, y in self.__client_shares if x == first_client_id), None
+        )
+        second_client_share = next(
+            (y for x, y in self.__client_shares if x == second_client_id), None
+        )
+
+        self.__additive_share = first_client_share + second_client_share
+
+    def get_additive_share(self):
+        return self.__additive_share
 
     def calculate_A(self):
         if self.__A is not None:
@@ -201,6 +220,29 @@ class Party:
             P[i][i] = 1
 
         self.__A = multiply_matrix(multiply_matrix(B_inv, P, self.__p), B, self.__p)
+    
+    def calculate_q(self):
+        if self.__q is not None:
+            raise ValueError("q already calculated.")
+
+        self.__q = [0] * self.__n
+        self.__q, _ = Shamir(2*self.__t, self.__n, k0=0)
+
+    # set q to other parties
+    def _set_q(self, party_id, shared_q):
+        if self.__shared_q[party_id - 1] is not None:
+            raise ValueError("q already set.")
+
+        self.__shared_q[party_id - 1] = shared_q
+
+    # send q to other parties
+    def send_q(self):
+        for i in range(self.__n):
+            if i == self.__id - 1:
+                self.__shared_q[i] = self.__q[i]
+                continue
+
+            self.__parties[i]._set_q(self.__id, self.__q[i])
 
     def calculate_r(self, first_client_id, second_client_id):
         if self.__r is not None:
@@ -214,7 +256,12 @@ class Party:
         second_client_share = next(
             (y for x, y in self.__client_shares if x == second_client_id), None
         )
-        multiplied_shares = (first_client_share * second_client_share) % self.__p
+
+        # receive q from other parties
+        # add sum of qs in multiplied shares
+        qs = [x[1] for x in self.__shared_q]
+
+        multiplied_shares = ((first_client_share * second_client_share) + sum(qs) ) % self.__p # f(1)g(1) + q1(1) + q2(1) + ...
 
         for i in range(self.__n):
             self.__r[i] = (multiplied_shares * self.__A[self.__id - 1][i]) % self.__p
@@ -245,9 +292,12 @@ class Party:
         return self.__multiplicative_share
 
     def reset(self):
+        self.__q = None
+        self.__shared_q = [None] * self.__n
         self.__r = None
         self.__shared_r = [None] * self.__n
         self.__multiplicative_share = None
+        self.__additive_share = None
 
 
 def f(x, coefficients, p, t):
@@ -256,7 +306,6 @@ def f(x, coefficients, p, t):
 
 def Shamir(t, n, k0):
     p = 23
-
     coefficients = [random.randint(0, p - 1) for _ in range(t)]
     coefficients[0] = k0
 
@@ -295,13 +344,14 @@ def reconstruct_secret(shares, coefficients, p):
     return secret
 
 
+
 def main():
     # Shamir's secret sharing
     t = 2
     n = 5
-    first_secret = 0
-    second_secret = 0
-    third_secret = 1
+    first_secret = 3
+    second_secret = 4
+    third_secret = 5
     first_shares, p = Shamir(t, n, first_secret)  # First client
     second_shares, _ = Shamir(t, n, second_secret)  # Second client
     third_shares, _ = Shamir(t, n, third_secret)  # Third client
@@ -332,40 +382,22 @@ def main():
 
         party.set_parties(parties)
 
-    # Calulate A for each party
+    # Calculate the additive share for each party
     for i in range(n):
         party = parties[i]
 
-        party.calculate_A()
+        party.calculate_additive_share(1,2)
 
-    # Calulate r for each party
-    for i in range(n):
-        party = parties[i]
-
-        party.calculate_r(1, 2)
-
-    # Send r to each party
-    for i in range(n):
-        party = parties[i]
-
-        party.send_r()
-
-    # Calculate the multiplicative share for each party
-    for i in range(n):
-        party = parties[i]
-
-        party.calculate_multiplicative_share()
-
-    # Sum up the multiplicative shares
-    multiplicative_shares = [(0, 0)] * n
+    # Sum up the additive shares
+    additive_shares = [(0, 0)] * n
 
     for i in range(n):
         party = parties[i]
 
-        multiplicative_shares[i] = (i + 1, party.get_multiplicative_share())
+        additive_shares[i] = (i + 1, party.get_additive_share())
 
     print("Selected Shares for Reconstruction:")
-    selected_shares = [multiplicative_shares[3], multiplicative_shares[1]]
+    selected_shares = [additive_shares[3], additive_shares[1]]
     print(selected_shares)
 
     coefficients = computate_coefficients(selected_shares, p)
@@ -376,7 +408,7 @@ def main():
 
     print("secret = ", secret % p)
 
-    assert (first_secret * second_secret) % p == round(secret % p)
+    assert (first_secret + second_secret) % p == round(secret % p)
 
     # Reset the parties
     for i in range(n):
@@ -387,6 +419,24 @@ def main():
     #
     # New multiplication
     #
+
+    # Calulate A for each party
+    for i in range(n):
+        party = parties[i]
+
+        party.calculate_A()
+
+    # Calulate q for each party
+    for i in range(n):
+        party = parties[i]
+
+        party.calculate_q()
+
+    # Send q to each party
+    for i in range(n):
+        party = parties[i]
+
+        party.send_q()
 
     # Calulate r for each party
     for i in range(n):

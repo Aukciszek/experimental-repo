@@ -1,7 +1,35 @@
 import os
+import random
 
-binary = lambda n: n > 0 and [n & 1] + binary(n >> 1) or []
+binary_internal = lambda n: n > 0 and [n & 1] + binary_internal(n >> 1) or []
 
+def binary(n):
+    if n==0:
+        return [0]
+    else:
+        return binary_internal(n)
+
+def f(x, coefficients, p, t):
+    return sum([coefficients[i] * x**i for i in range(t)]) % p
+
+def Shamir(t, n, k0):
+    p = 23
+
+    coefficients = [random.randint(0, p - 1) for _ in range(t)]
+    coefficients[0] = k0
+
+    if coefficients[-1] == 0:
+        coefficients[-1] = random.randint(1, p - 1)
+
+    shares = []
+
+    for i in range(1, n + 1):
+        shares.append((i, f(i, coefficients, p, t)))
+
+    return shares, p
+
+def new_and(a,b):
+    return a & b
 
 def romb(x, X, y, Y):
     return (x & y, x & (X ^ Y) ^ X)
