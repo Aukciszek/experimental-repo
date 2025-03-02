@@ -1,9 +1,21 @@
 import os
+import copy
 import random
 
 binary_internal = lambda n: n > 0 and [n & 1] + binary_internal(n >> 1) or []
 
-
+def modular_multiplicative_inverse(b: int, n: int) -> int:
+    A = n
+    B = b
+    U = 0
+    V = 1
+    while B != 0:
+        q = A // B
+        A, B = B, A - q * B
+        U, V = V, U - q * V
+    if U < 0:
+        return U + n
+    return U
 
 def inverse_matrix_mod(matrix_dc, modulus):
     matrix_dc = copy.deepcopy(matrix_dc)
@@ -100,6 +112,7 @@ class Party:
         self.__shared_r = [None] * n
         self.__multiplicative_share = None
         self.__additive_share = None
+        self.__comparison_a = None 
         self.__multiplication_results = []
 
     def set_shares(self, client_id, share):
@@ -196,10 +209,6 @@ class Party:
     def get_additive_share(self):
         return self.__additive_share
     
-    # def multiply_by_constant(self, constant, share_id, new_share_id):
-    #     wyn=constant*self.__client_shares[share_id][1]
-    #     self.set_shares(new_share_id,wyn)
-    
     def calculate_share_of_random_number(self):
         def multiply_bit_shares_by_powers_of_2(shares):
             multiplied_shares = []
@@ -222,6 +231,20 @@ class Party:
         self.__random_number_share = share_of_random_number
 
     # podziel_miedzy_party_losowa_liczbe_o_dlugosci_100_bitow() -> 100 * podziel_miedzy_party_losowy_bit
+
+    def calculate_a_comparison(self, l, k, first_client_id, second_client_id):
+        first_client_share = next(
+            (y for x, y in self.__client_shares if x == first_client_id), None
+        )
+        second_client_share = next(
+            (y for x, y in self.__client_shares if x == second_client_id), None
+        )
+        
+        self.__comparison_a = pow(2, l + k + 2) - self.__random_number_share + pow(2, l) + first_client_share - second_client_share
+
+    def get_comparison_a(self):
+        return self.__comparison_a
+
 
     def reset(self):
         self.__r = None
@@ -330,7 +353,7 @@ def main():
     for i in range(l + k + 2):
         new_r_bit = int.from_bytes(os.urandom(1)) % 2
         bits_of_r.append(new_r_bit)
-        shares_new_r_bit, p_new_r_bit = Shamir(t, n, new_r_bit,p)
+        shares_new_r_bit = Shamir(t, n, new_r_bit,p)
         shares_of_bits_of_r.append(shares_new_r_bit)
 
     print("bits of r: ", bits_of_r)
@@ -345,105 +368,84 @@ def main():
         party = Party(t, n, i + 1, p)
         parties.append(party)
 
+    # Set the parties for each party
+    for i in range(n):
+        party = parties[i]
+        party.set_parties(parties)    
+
     # Set the shares for each party
     for i in range(n):
         party = parties[i]
         party.set_shares(1, shares_s[i][1])
         party.set_shares(2, shares_d[i][1])
-        for j in range(len(bits_of_r)):
-            party.set_shares(j+3,shares_of_bits_of_r[j][i][1])
 
-    # Set the parties for each party
+    print(shares_of_bits_of_r)
+
+    shares_for_clients = [[] for _ in range(n)]
+
+    for bit in shares_of_bits_of_r:
+        for i, share_of_bit in enumerate(bit):
+                shares_for_clients[i].append(share_of_bit[1])
+
     for i in range(n):
         party = parties[i]
-        party.set_parties(parties)
+        party.set_random_number_bit_shares(shares_for_clients[i])
 
-    # Calulate A for each party
     for i in range(n):
         party = parties[i]
-        party.calculate_A()
+        party.calculate_share_of_random_number()
 
-    # Calulate r for each party
     for i in range(n):
         party = parties[i]
-        party.calculate_r(1, 2)
+        party.calculate_a_comparison(l, k, 1, 2)
 
-    # Send r to each party
-    for i in range(n):
-        party = parties[i]
-        party.send_r()
 
-    # Calculate the multiplicative share for each party
-    for i in range(n):
-        party = parties[i]
-
-        party.calculate_multiplicative_share()
-
-    # Sum up the multiplicative shares
-    multiplicative_shares = [(0, 0)] * n
+    a_comparison_share = [(0, 0)] * n
 
     for i in range(n):
         party = parties[i]
 
-        multiplicative_shares[i] = (i + 1, party.get_multiplicative_share())
+        a_comparison_share[i] = (i + 1, party.get_comparison_a())
 
-    print("Selected Shares for Reconstruction:")
-    selected_shares = [multiplicative_shares[3], multiplicative_shares[1]]
-    print(selected_shares)
+    coefficients = computate_coefficients(a_comparison_share, p)
+    opened_a = reconstruct_secret(a_comparison_share, coefficients, p)
 
-    coefficients = computate_coefficients(selected_shares, p)
+    print("opened_a = ", opened_a)
 
-    print("coefficients = ", coefficients)
 
-    secret = reconstruct_secret(selected_shares, coefficients, p)
+    # a_bin = binary(a)
+    # r_prim_bin = binary(r)
 
-    print("secret = ", secret % p)
+    # while len(a_bin) < l + k + 2:
+    #     a_bin.append(0)
 
-    assert (first_secret * second_secret) % p == round(secret % p)
+    # while len(r_prim_bin) < l + k + 2:
+    #     r_prim_bin.append(0)
 
-    
+    # print("a in binary: ", a_bin)
+    # print("r_prim in binary: ", r_prim_bin)
 
-    a = pow(2, l + k + 1) - r + pow(2, l) + d - s
-    if a < 0:
-        print("a: ", a)
-        print("a is negative")
-        return
+    # z = []
 
-    print("a: ", a)
+    # for i in range(l):
+    #     z.append((a_bin[i] ^ r_prim_bin[i], a_bin[i]))
 
-    a_bin = binary(a)
-    r_prim_bin = binary(r)
+    # z = list(reversed(z))
+    # z.append((0, 0))
 
-    while len(a_bin) < l + k + 2:
-        a_bin.append(0)
+    # print("z: ", z)
 
-    while len(r_prim_bin) < l + k + 2:
-        r_prim_bin.append(0)
+    # while len(z) > 1:
+    #     z[0] = romb(z[0][0], z[0][1], z[1][0], z[1][1])
+    #     z.pop(1)
 
-    print("a in binary: ", a_bin)
-    print("r_prim in binary: ", r_prim_bin)
+    # print("z: ", z)
 
-    z = []
+    # res = a_bin[l] ^ r_prim_bin[l] ^ z[0][1]
 
-    for i in range(l):
-        z.append((a_bin[i] ^ r_prim_bin[i], a_bin[i]))
+    # print("res: ", res)
 
-    z = list(reversed(z))
-    z.append((0, 0))
-
-    print("z: ", z)
-
-    while len(z) > 1:
-        z[0] = romb(z[0][0], z[0][1], z[1][0], z[1][1])
-        z.pop(1)
-
-    print("z: ", z)
-
-    res = a_bin[l] ^ r_prim_bin[l] ^ z[0][1]
-
-    print("res: ", res)
-
-    assert res == 1
+    # assert res == 1
 
 
 if __name__ == "__main__":
