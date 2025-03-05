@@ -122,8 +122,8 @@ class Party:
         self.__multiplicative_share = None
         self.__additive_share = None
         self.__comparison_a = None
-        self.__opened_a = None
         self.__multiplication_results = []
+        self.__zZ = None
 
     def set_shares(self, client_id, share):
         self.__client_shares.append((client_id, share))
@@ -160,6 +160,17 @@ class Party:
             P[i][i] = 1
 
         self.__A = multiply_matrix(multiply_matrix(B_inv, P, self.__p), B, self.__p)
+
+    def calculate_r_2(self, first_share, second_share):
+        if self.__r is not None:
+            self.__r = None
+
+        self.__r = [0] * self.__n
+
+        multiplied_shares = (first_share * second_share) % self.__p
+
+        for i in range(self.__n):
+            self.__r[i] = (multiplied_shares * self.__A[self.__id - 1][i]) % self.__p
 
     def calculate_r(self, first_client_id, second_client_id):
         if self.__r is not None:
@@ -215,6 +226,12 @@ class Party:
         )
 
         self.__additive_share = first_client_share + second_client_share
+
+    def calculate_additive_share_2(self, first_share, second_share):
+        if self.__additive_share is not None:
+            self.__additive_share = None
+
+        self.__additive_share = first_share + second_share
 
     def get_additive_share(self):
         return self.__additive_share
@@ -274,15 +291,16 @@ class Party:
         print("a in binary: ", a_bin)
         print("r_prim in binary: ", r_prim_bin)
 
-        z = []
+        zZ = []
 
         for i in range(l):
-            z.append((a_bin[i] ^ r_prim_bin[i], a_bin[i]))
+            zZ.append((a_bin[i] ^ r_prim_bin[i], a_bin[i]))
 
-        z = list(reversed(z))
-        z.append((0, 0))
+        zZ = list(reversed(zZ))
+        zZ.append((0, 0))
 
-        print("z: ", z)
+        print("zZ: ", zZ)
+        self.__zZ = zZ
 
     def reset(self):
         self.__r = None
@@ -355,8 +373,46 @@ def reconstruct_secret(shares, coefficients, p):
     return secret
 
 
-def romb(x, X, y, Y):
+def romb1(x, X, y, Y):
     return (x & y, x & (X ^ Y) ^ X)
+
+
+def romb(parties, l):
+    x = [p.__zZ[0][0] for p in parties]
+    X = [p.__zZ[0][1] for p in parties]
+    for i in range(1, l):
+        for p in parties:
+            # 1 x[p] = p.calculate_multiplicative_share(x[p], p.__zZ[i][0])
+            # 2 pom = p.calculate_additive_share(X[p], p.__zZ[i][1])
+            # 3 pom = p.calculate_multiplicative_share(x[p], pom)
+            # 4 X[p] = p.calculate_additive_share(pom, X[p])
+
+            # 1
+            p.calculate_A()
+            p.calculate_r_2(x[p], p.__zZ[i][0])
+            p.send_r()
+            p.calculate_multiplicative_share()
+            x[p] = p.get_multiplicative_share()
+            # 2
+            p.calculate_additive_share_2(X[p], p.__zZ[i][1])
+            pom = p.get_additive_share()
+            # 3
+            p.calculate_A()
+            p.calculate_r_2(x[p], pom)
+            p.send_r()
+            p.calculate_multiplicative_share()
+            pom = p.get_multiplicative_share()
+            # 4
+            p.calculate_additive_share_2(pom, X[p])
+            X[p] = p.get_additive_share()
+
+    return x, X
+
+
+# x[p]    p.__zZ[i][0]
+# X[p]    p.__zZ[i][1]
+#
+#
 
 
 def main():
@@ -457,6 +513,10 @@ def main():
     for i in range(n):
         party = parties[i]
         party.calculate_z(opened_a, l, k)
+
+    x, X = romb(parties, l)
+
+    print(x, X)
 
     # while len(z) > 1:
     #     z[0] = romb(z[0][0], z[0][1], z[1][0], z[1][1])
