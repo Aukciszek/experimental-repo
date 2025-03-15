@@ -613,8 +613,8 @@ def romb(parties, l):
 # X[p]    p.__zZ[i][1]
 
 def main():
-    s = 7
-    d = 3
+    s = 6
+    d = 7
 
     # liczba bitów p = k+l
     k = 1

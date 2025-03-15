@@ -323,7 +323,7 @@ def f(x, coefficients, p, t):
 
 
 def Shamir(t, n, k0):
-    p = 23
+    p = 13
     coefficients = [random.randint(0, p - 1) for _ in range(t)]
     coefficients[0] = k0
 
@@ -388,8 +388,8 @@ def main():
     # Shamir's secret sharing
     t = 2
     n = 5
-    first_secret = 0
-    second_secret = 1
+    first_secret = 6
+    second_secret = 7
 
     first_shares, p = Shamir(t, n, first_secret)  # First client
     second_shares, _ = Shamir(t, n, second_secret)  # Second client
@@ -480,7 +480,30 @@ def main():
     # xor
     ###
 
-    calculate_XOR(parties,"1","2", "xor_1_dj")
+    mati_shares=[(0,8),(1,3),(2,11),(3,6),(4,1)]
+
+    parties[0].set_shares("mati_z",8)
+    parties[1].set_shares("mati_z",3)
+    parties[2].set_shares("mati_z",11)
+    parties[3].set_shares("mati_z",6)
+    parties[4].set_shares("mati_z",1)
+
+    print("Selected Shares for Reconstruction:")
+    indeksy = [_ for _ in range(n)]
+    pom1 = random.choice(indeksy)
+    indeksy.pop(pom1)
+    pom2 = random.choice(indeksy)
+    selected_shares = [mati_shares[pom1], mati_shares[pom2]]
+
+    coefficients = computate_coefficients(selected_shares, p)
+    secret = reconstruct_secret(selected_shares, coefficients, p)
+    
+    print("rekonstruowane Z = ", secret % p)
+
+    for party in parties:
+        party.set_shares("jawne",0)
+
+    calculate_XOR(parties,"mati_z", "jawne", "xor_1_dj")
 
     # the xor shares
     xor_shares = [(0, 0)] * n
@@ -490,7 +513,12 @@ def main():
         xor_shares[i] = (i + 1, party.get_xor_share())
 
     print("Selected Shares for Reconstruction:")
-    selected_shares = [xor_shares[2], xor_shares[4]]
+    indeksy = [_ for _ in range(n)]
+    pom1 = random.choice(indeksy)
+    indeksy.pop(pom1)
+    pom2 = random.choice(indeksy)
+    selected_shares = [xor_shares[pom1], xor_shares[pom2]]
+
     print(selected_shares)
 
     coefficients = computate_coefficients(selected_shares, p)
