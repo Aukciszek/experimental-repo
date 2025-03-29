@@ -6,7 +6,7 @@ authors = ["Mateusz Piwowarski <skyperpl@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.12"
 mpyc = "^0.10"
 
 

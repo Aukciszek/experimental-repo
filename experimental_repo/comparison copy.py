@@ -254,7 +254,7 @@ class Party:
         self.__comparison_a = (
             # pow(2, l + k + 2)
             # - self.__random_number_share
-            # + pow(2, l)
+            + pow(2, l)
             + first_client_share
             - second_client_share
         )

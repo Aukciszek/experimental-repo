@@ -257,7 +257,7 @@ class Party:
         )
 
         self.__comparison_a = (
-            pow(2, l + k + 2)
+            pow(2, l + k-1)
             - self.__random_number_share
             + pow(2, l)
             + first_client_share
@@ -270,12 +270,15 @@ class Party:
     def prepare_z(self, opened_a, l, k):
         a_bin = binary(opened_a)
 
-        while len(a_bin) < l + k + 2:
+        while len(a_bin) < l + k :
             a_bin.append(0)
 
         print("a in binary: ", a_bin)
 
         self.__comparison_a_bits = a_bin
+
+    def add_comparison_a_bit_to_random_number_bit_share_and_save_as_z(self, comparison_a_bit_index, random_number_bit_share_index):        
+        self.__x = self.__comparison_a_bits[comparison_a_bit_index] + self.__random_number_bit_shares[random_number_bit_share_index][1]
 
     def calculate_r_of_x_AND_y(self):
         self.__r = [0] * self.__n
@@ -289,7 +292,7 @@ class Party:
         self.__z = self.__multiplicative_share
 
     def add_X_to_Y(self):
-        self.__additive_share = self.__X + self.__Y
+        self.__Z = self.__X + self.__Y
 
     def calculate_r_of_x_AND_Z(self):
         self.__r = [0] * self.__n
@@ -303,48 +306,21 @@ class Party:
         self.__Z = self.__multiplicative_share
     
     def add_Z_to_X(self):
-        self.__additive_share = self.__Z + self.__X
+        self.__Z = self.__Z + self.__X
 
-    def calculate_r_of_X_mul_Y(self):
-        self.__r = [0] * self.__n
-        multiplied_shares = (self.__X * self.__Y) % self.__p
-        for i in range(self.__n):
-            self.__r[i] = (multiplied_shares * self.__A[self.__id - 1][i]) % self.__p
-
-    def calculate_r_of_Z_mul_X(self):
-        self.__r = [0] * self.__n
-        multiplied_shares = (self.__Z * self.__X) % self.__p
-        for i in range(self.__n):
-            self.__r[i] = (multiplied_shares * self.__A[self.__id - 1][i]) % self.__p
-
-    def set_Z_to_XOR(self):
-        self.__Z = self.__additive_share - 2 * self.__multiplicative_share
-
-    def calculate_r_of_comparison_a_bit_mul_random_number_bit_share(self, comparison_a_bit_index, random_number_bit_share_index):
-        share1 = self.__comparison_a_bits[comparison_a_bit_index]
-        share2 = self.__random_number_bit_shares[random_number_bit_share_index][1]
-
-        self.__r = [0] * self.__n
-        multiplied_shares = (share1 * share2) % self.__p
-        for i in range(self.__n):
-            self.__r[i] = (multiplied_shares * self.__A[self.__id - 1][i]) % self.__p
-
-    def add_comparison_a_bit_to_random_number_bit_share(self, comparison_a_bit_index, random_number_bit_share_index):
-        share1 = self.__comparison_a_bits[comparison_a_bit_index]
-        share2 = self.__random_number_bit_shares[random_number_bit_share_index][1]
-        
-        self.__additive_share = share1 + share2
-
-    def set_x_to_XOR(self):
-        self.__x = self.__additive_share - 2 * self.__multiplicative_share
-
-    def prepare_for_next_romb_set_X_y_Y(self,index):
+    def prepare_for_next_romb(self,index):
+        # 1. self.__x = add_comparison_a_bit_to_random_number_bit_share(index)
+        # 2. self.__X = self.__comparison_a_bits(index)
+        # 3. self.__y = self.__z
+        # 4. self.__Y = self.__Z
         if(index == 0):
             # prepare for first romb
+            self.add_comparison_a_bit_to_random_number_bit_share_and_save_as_z(index,index)
             self.__X = self.__comparison_a_bits[index]
             self.__y = 0
             self.__Y = 0
         else:
+            self.add_comparison_a_bit_to_random_number_bit_share_and_save_as_z(index,index)
             self.__X = self.__comparison_a_bits[index]
             self.__y = self.__z
             self.__Y = self.__Z
@@ -376,7 +352,18 @@ class Party:
     """
 
 def comparison(parties: list,l: int):
-    def calculate_X_AND_Y():
+    # 0. calculate_A()
+    # Calulate A for each party
+    for party in parties:
+        party.calculate_A()
+
+    for i in range(l):
+        # 1. self.__x = add_comparison_a_bit_to_random_number_bit_share(index)
+        # 2. self.__X = self.__comparison_a_bits(index)
+        # 3. self.__y = self.__z
+        # 4. self.__Y = self.__Z
+        for party in parties:
+            party.prepare_for_next_romb(i)
         # 1. calculate_r_of_x_AND_y()
         # Calulate r for each party
         for party in parties:
@@ -394,24 +381,9 @@ def comparison(parties: list,l: int):
         for party in parties:
             party.set_z_to_multiplicative_share()
             party.reset()
-    
-    def calculate_X_XOR_Y():
-        # 1. self.__additive_share = self.__X + self.__Y
+        # 5. self.__Z = add_X_to_Y()
         for party in parties:
             party.add_X_to_Y()
-        # 2. self.__r = X * Y
-        for party in parties:
-            party.calculate_r_of_X_mul_Y()
-        for party in parties:
-            party.send_r()
-        for party in parties:
-            party.calculate_multiplicative_share()
-        # 3. self.__Z = self.__additive_share - 2 * self._multiplicative_share
-        for party in parties:
-            party.set_Z_to_XOR()
-            party.reset()
-
-    def calculate_x_AND_Z():
         # 6. calculate_r_of_x_AND_Z()
         for party in parties:
             party.calculate_r_of_x_AND_Z()
@@ -425,57 +397,9 @@ def comparison(parties: list,l: int):
         for party in parties:
             party.set_Z_to_multiplicative_share()
             party.reset()
-
-    def calculate_Z_XOR_X():
-        # 1. self.__additive_share = self.__Z + self.__X
+        # 10. self.__Z = add_Z_to_X()
         for party in parties:
             party.add_Z_to_X()
-        # 2. self.__r = Z * X
-        for party in parties:
-            party.calculate_r_of_Z_mul_X()
-        for party in parties:
-            party.send_r()
-        for party in parties:
-            party.calculate_multiplicative_share()
-        # 3. self.__Z = self.__additive_share - 2 * self._multiplicative_share
-        for party in parties:
-            party.set_Z_to_XOR()
-            party.reset()
-
-    def calculate_comparison_a_bit_XOR_random_number_bit_share(index):
-        # 1. self.__additive_share = comparison_a_bit + random_number_bit_share
-        for party in parties:
-            party.add_comparison_a_bit_to_random_number_bit_share(index,index)
-        # 2. self.__r = comparison_a_bit * random_number_bit_share
-        for party in parties:
-            party.calculate_r_of_comparison_a_bit_mul_random_number_bit_share(index,index)
-        for party in parties:
-            party.send_r()
-        for party in parties:
-            party.calculate_multiplicative_share()
-        # 3. self.__x = self.__additive_share - 2 * self._multiplicative_share
-        for party in parties:
-            party.set_x_to_XOR()
-            party.reset()
-    
-    # Calulate A for each party
-    for party in parties:
-        party.calculate_A()
-
-    for i in range(l):
-        # setup
-        calculate_comparison_a_bit_XOR_random_number_bit_share(i)
-        for party in parties:
-            party.prepare_for_next_romb_set_X_y_Y(i)
-        # x^y
-        calculate_X_AND_Y()
-        # (X⊕Y)
-        calculate_X_XOR_Y()
-        # x^(X⊕Y)
-        calculate_x_AND_Z()
-        # x^(X⊕Y)⊕X
-        calculate_Z_XOR_X()
-        
 
 def binary_exponentiation(b, k, n):
     if k < 0:
@@ -578,7 +502,7 @@ def main():
     d = 7
 
     # liczba bitów p = k+l
-    k = 1
+    k = 4
     # liczba bitów d,s <= l
     l = 3
 
@@ -587,7 +511,7 @@ def main():
     # serwery odzyskujace sekret
     t = 2
     # liczba pierwsza
-    p = 13
+    p = 97
 
     shares_s = Shamir(t, n, s, p)
     print(s, "shares_s: ", shares_s)
@@ -602,21 +526,28 @@ def main():
 
     print("reconstructed d: ", secret % p)
 
-    bits_of_r = []
+    # bits_of_r = []
+    # shares_of_bits_of_r = []
+    # for i in range(l + k -1):
+    #     new_r_bit = int.from_bytes(os.urandom(1)) % 2
+    #     bits_of_r.append(new_r_bit)
+    #     shares_new_r_bit = Shamir(t, n, new_r_bit, p)
+    #     shares_of_bits_of_r.append(shares_new_r_bit)
+
+    bits_of_r = [1,0,0,1,1,1]
     shares_of_bits_of_r = []
-    for i in range(l + k + 2):
-        new_r_bit = int.from_bytes(os.urandom(1), byteorder = 'little') % 2
-        bits_of_r.append(new_r_bit)
+    for i in range(l + k -1):
+        new_r_bit = bits_of_r[i]
         shares_new_r_bit = Shamir(t, n, new_r_bit, p)
         shares_of_bits_of_r.append(shares_new_r_bit)
 
-    print("bits of r: ", bits_of_r)
-    print(
-        "l-th bit of r: ",
-        bits_of_r[l],
-        "shares of l-th bit of r: ",
-        shares_of_bits_of_r[l],
-    )
+    # print("bits of r: ", bits_of_r)
+    # print(
+    #     "l-th bit of r: ",
+    #     bits_of_r[l],
+    #     "shares of l-th bit of r: ",
+    #     shares_of_bits_of_r[l],
+    # )
 
     # r = sum([bits_of_r[i] * pow(2, i) for i in range(l + k + 2)])
 

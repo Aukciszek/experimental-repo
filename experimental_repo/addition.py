@@ -344,7 +344,6 @@ def reconstruct_secret(shares, coefficients, p):
     return secret
 
 
-
 def main():
     # Shamir's secret sharing
     t = 2
