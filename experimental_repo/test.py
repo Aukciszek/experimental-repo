@@ -176,21 +176,21 @@ def add_multiplied_shares(multiplied_shares):
 
 ###
 
-s = 4
-d = 6
+s = 2
+d = 3
 # liczba bitów p = k+l
 k = 1
 # liczba bitów d,s <= l
-l = 3
+l = 2
 # liczba serwerow
 n = 5
 # serwery odzyskujace sekret
 t = 2
 # liczba pierwsza
-p = 13
+p = 7
 
 
-tab = [1,1,0,1,1]
+tab = [1,0,0,0,1]
 print(tab)
 
 shery_bitu_nr_0 = Shamir(t,n,tab[0],p)
