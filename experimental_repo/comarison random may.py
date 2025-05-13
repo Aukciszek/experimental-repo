@@ -286,6 +286,8 @@ class Party:
             sum([self.__shared_r[i] for i in range(self.__n)]) % self.__p
         )
 
+        #print("muti",self.__multiplicative_share)
+
     def get_multiplicative_share(self):
         return self.__multiplicative_share
     
@@ -340,16 +342,18 @@ class Party:
         self.__additive_share = None
         self.__xor_share = None
 
+    def initialize_z_and_Z(self,l):
+        self.set_shares("z",self.__z_table[l-1])
+        self.set_shares("Z",self.__Z_table[l-1])
+
     def prepare_for_next_romb(self,index):
+        self.set_shares("x",self.get_share_by_name("z"))
+        self.set_shares("X",self.get_share_by_name("Z"))
         if(index == 0):
             # prepare for last romb
-            self.set_shares("x",self.__z_table[index])
-            self.set_shares("X",self.__Z_table[index])
             self.set_shares("y",0)
             self.set_shares("Y",0)
         else:
-            self.set_shares("x",self.__z_table[index])
-            self.set_shares("X",self.__Z_table[index])
             self.set_shares("y",self.__z_table[index-1])
             self.set_shares("Y",self.__Z_table[index-1])
 
@@ -380,7 +384,7 @@ class Party:
         share_of_random_number = add_multiplied_shares(pom)
 
         self.__random_number_share = share_of_random_number
-        print("share of random number",share_of_random_number)
+        #print("share of random number",share_of_random_number)
 
     # podziel_miedzy_party_losowa_liczbe_o_dlugosci_100_bitow() -> 100 * podziel_miedzy_party_losowy_bit
 
@@ -401,26 +405,53 @@ class Party:
     def get_comparison_a(self):
         return self.__comparison_a
 
-    def prepare_z(self, opened_a, l, k):
+    def prepare_z_tables(self, opened_a, l, k):
         a_bin = binary(opened_a)
 
         while len(a_bin) < l + k :
             a_bin.append(0)
-
-        print("a in binary: ", a_bin)
-
         self.__comparison_a_bits = a_bin
 
         self.__z_table = [None for _ in range(l)]
         self.__Z_table = [None for _ in range(l)]
 
         for i in range(l-1,-1,-1):
-            self.__z_table[i] = self.__comparison_a_bits[i] + self.__random_number_bit_shares[i][1]
+            self.__z_table[i] = self.__comparison_a_bits[i] # XOR self.__random_number_bit_shares[i][1]
             self.__Z_table[i] = self.__comparison_a_bits[i]
-        
-        print("z_table",self.__z_table)
-        print("Z_table",self.__Z_table)
+
+        self.set_shares("z",self.get_share_by_name("z"))
+        self.set_shares("Z",self.get_share_by_name("Z"))
+        #print(self.__z_table,self.__Z_table)
+
+    def calculate_additive_share_of_z_table_arguments(self,index):
+        first_share = self.__comparison_a_bits[index]
+        second_share = self.__random_number_bit_shares[index][1]
+
+        self.__additive_share = first_share + second_share
+        #print("adytyw",self.__additive_share)
     
+    def calculate_r_of_z_table_arguments(self,index):
+        if self.__r is not None:
+            raise ValueError("r already calculated.")
+
+        self.__r = [0] * self.__n
+
+        first_share = self.__comparison_a_bits[index]
+        second_share = self.__random_number_bit_shares[index][1]
+
+        # receive q from other parties
+        # add sum of qs in multiplied shares
+        qs = [x[1] for x in self.__shared_q]
+
+        multiplied_shares = ((first_share * second_share) + sum(qs) ) % self.__p # f(1)g(1) + q1(1) + q2(1) + ...
+
+        for i in range(self.__n):
+            self.__r[i] = (multiplied_shares * self.__A[self.__id - 1][i]) % self.__p
+
+    def set_z_table_to_xor_share(self,index):
+        #print(self.__xor_share)
+        self.__z_table[index] = self.__xor_share
+        #print(self.__z_table[index])
 
     def add_comparison_a_bit_to_random_number_bit_share_and_save_as_res(self,comparison_a_bit_index,random_number_bit_share_index):
         self.__res = self.__comparison_a_bits[comparison_a_bit_index] + self.__random_number_bit_shares[random_number_bit_share_index][1]
@@ -429,7 +460,11 @@ class Party:
         self.__res = self.__res + self.__shares["Z"]
     
     def print_test_1(self):
-        print("id",self.__id,"z",self.get_share_by_name("z"),"Z",self.get_share_by_name("Z"))
+        print("id",self.__id,"z",self.get_share_by_name("z"),"Z",self.get_share_by_name("Z"))#,self.__z_table,self.__Z_table)
+
+    def print_test_2(self):
+        print(self.__z_table,self.__Z_table)
+        print("x",self.get_share_by_name("x"),"y",self.get_share_by_name("y"),"X",self.get_share_by_name("X"),"Y",self.get_share_by_name("Y"))
 
     def get_res(self):
         return self.__res
@@ -441,29 +476,35 @@ class Party:
         return self.__random_number_bit_shares[index]
 
 def comparison(parties: list, opened_a:int,l: int,k:int):
-    # Calulate A for each party
+    # Prepare z and Z initial values
     for party in parties:
-        party.prepare_z(opened_a, l, k)
-        party.calculate_A()
-    # romb the bits
+        party.prepare_z_tables(opened_a, l, k)
+    for i in range(l):
+        calculate_z_tables(parties,l)
+    for party in parties:
+        party.initialize_z_and_Z(l)
+    # Romb the bits
     for i in range(l-1,-1,-1):
         # set x,y,X,Y
         for party in parties:
             party.prepare_for_next_romb(i)
+        parties[0].print_test_2()
+        parties[0].print_test_1()
         ### x AND y
         multiply_shares(parties,"x","y","z")
         reset_parties(parties)
+        parties[0].print_test_1()
         ### X XOR Y
-        # Add shares
-        add_shares(parties,"X","Y","Z")
+        calculate_XOR(parties,"X","Y","Z")
+        reset_parties(parties)
+        parties[0].print_test_1()
         ### x AND (X XOR Y)
         multiply_shares(parties,"x","Z","Z")
         reset_parties(parties)
+        parties[0].print_test_1()
         ### x AND (X XOR Y) XOR X
-        # Add shares
-        add_shares(parties,"Z","X","Z")
-        for party in parties:
-            party.print_test_1()
+        calculate_XOR(parties,"Z","X","Z")
+        parties[0].print_test_1()
         reset_parties(parties)
     # calculate result
     for party in parties:
@@ -565,6 +606,32 @@ def add_shares(parties, first_share_name:str, second_share_name:str,result_share
             party.set_shares(result_share_name,None)
         party.set_share_to_additive_share(result_share_name)
 
+def calculate_z_table_XOR(parties, index:int):
+        # 1. self.__additive_share = x + y
+        for party in parties:
+            party.calculate_additive_share_of_z_table_arguments(index)
+        # 2. self.__multiplicative_share = x * y
+        for party in parties:
+            party.calculate_q()
+        for party in parties:
+            party.send_q()
+        for party in parties:
+            party.calculate_r_of_z_table_arguments(index)
+        for party in parties:
+            party.send_r()
+        for party in parties:
+            party.calculate_multiplicative_share()
+        # 3. self.__xor_share = self.__additive_share - 2 * self._multiplicative_share
+        for party in parties:
+            party.calculate_xor_share()
+            party.set_z_table_to_xor_share(index)
+
+def calculate_z_tables(parties,l):
+    for i in range(l-1,-1,-1):
+        calculate_z_table_XOR(parties,i)
+        reset_parties(parties)
+
+
 def reset_parties(parties):
     for party in parties:
         party.reset()
@@ -622,6 +689,10 @@ def main():
     for i in range(n):
         party = parties[i]
         party.set_parties(parties)
+
+    # Calulate A for each party
+    for party in parties:
+        party.calculate_A()
 
     # Set the shares for each party
     for i in range(n):
