@@ -2,7 +2,7 @@ import copy
 import os
 import random
 
-binary_internal = lambda n: n > 0 and [n & 1] + binary_internal(n >> 1) or []
+_internal = lambda n: n > 0 and [n & 1] + binary_internal(n >> 1) or []
 
 
 def binary(n):
@@ -10,7 +10,7 @@ def binary(n):
         return [0]
     else:
         return binary_internal(n)
-
+binary
 
 def modular_multiplicative_inverse(b: int, n: int) -> int:
     A = n
