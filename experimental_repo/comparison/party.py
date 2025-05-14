@@ -30,7 +30,6 @@ class Party:
         self.__z_table = None
         self.__Z_table = None
         self.__comparison_a_bits = []
-        self.__res = None  # wynik porownania
 
     def set_shares(self, share_name: str, share):
         self.__shares[share_name] = share
@@ -227,17 +226,6 @@ class Party:
     def calculate_comparison_a(self, l, k, first_share_name, second_share_name):
         first_share = self.__shares[first_share_name]
         second_share = self.__shares[second_share_name]
-        print(pow(2, l + k + 1),
-                self.__random_number_share[1],
-                pow(2, l),
-                first_share,
-                second_share,(
-                pow(2, l + k + 1)
-                - self.__random_number_share[1]
-                + pow(2, l)
-                + first_share
-                - second_share
-        ))
         self.__comparison_a = (
                 pow(2, l + k + 1)
                 - self.__random_number_share[1]
@@ -317,14 +305,11 @@ class Party:
         # print(self.__z_table[index])
 
     ### do obliczenia wyniku porownania
+    # [res] = a_l XOR [r_l] XOR [Z]
 
-    def add_comparison_a_bit_to_random_number_bit_share_and_save_as_res(self, comparison_a_bit_index,
-                                                                        random_number_bit_share_index):
-        self.__res = self.__comparison_a_bits[comparison_a_bit_index] + \
-                     self.__random_number_bit_shares[random_number_bit_share_index][1]
-
-    def add_res_to_Z(self):
-        self.__res = self.__res + self.__shares["Z"]
+    def prepare_shares_for_res_xors(self,comparison_a_bit_index, random_number_bit_share_index):
+        self.set_shares("a_l",self.__comparison_a_bits[comparison_a_bit_index])
+        self.set_shares("r_l",self.__random_number_bit_shares[random_number_bit_share_index][1])
 
     def print_test_1(self):
         print("id", self.__id, "z", self.get_share_by_name("z"), "Z",
@@ -334,6 +319,3 @@ class Party:
         print(self.__z_table, self.__Z_table)
         print("x", self.get_share_by_name("x"), "y", self.get_share_by_name("y"), "X", self.get_share_by_name("X"), "Y",
               self.get_share_by_name("Y"))
-
-    def get_res(self):
-        return self.__res

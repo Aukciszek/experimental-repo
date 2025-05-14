@@ -1,5 +1,3 @@
-from sharing_utils import *
-from arithmetic_utils import *
 from party import *
 
 
@@ -90,7 +88,7 @@ def reset_parties(parties):
         party.reset()
 
 
-# Compare s,d and save the resulting shares in party.__res
+# Compare s,d and save the resulting shares in share named "res"
 # d >= s  -->  res=1
 # d < s   -->  res=0
 def comparison(parties: list, opened_a: int, l: int, k: int):
@@ -126,11 +124,13 @@ def comparison(parties: list, opened_a: int, l: int, k: int):
         reset_parties(parties)
     # calculate result
     # [res] = a_l XOR [r_l] XOR [Z]
-    # TODO change addition to XOR
     for party in parties:
-        party.add_comparison_a_bit_to_random_number_bit_share_and_save_as_res(l, l)
-        party.add_res_to_Z()
-    # shares of the result are now stored in party.__res
+        party.prepare_shares_for_res_xors(l,l)
+    xor_shares(parties,"a_l","r_l","res")
+    reset_parties(parties)
+    xor_shares(parties,"res","Z","res")
+    reset_parties(parties)
+    # shares of the result are now stored in share named "res"
 
 
 def main():
@@ -217,13 +217,13 @@ def main():
     opened_a = reconstruct_secret(a_comparison_share, coefficients, p)
     print("opened_a = ", opened_a)
 
-    # Compare s,d and save the resulting shares in party.__res
+    # Compare s,d and save the resulting shares in share named "res"
     # d >= s  -->  res=1
     # d < s   -->  res=0
     comparison(parties, opened_a, l, k)
 
     # Reconstruct res
-    selected_shares = [(i, parties[i].get_res()) for i in range(n)]
+    selected_shares = [(i, parties[i].get_share_by_name("res")) for i in range(n)]
     coefficients = computate_coefficients(selected_shares, p)
     result = reconstruct_secret(selected_shares, coefficients, p)
 
