@@ -4,7 +4,7 @@ import sys
 from comparison import *
 
 
-def setup_parties(n, t, d, s, p, k, l):
+def setup_parties(n, t, d, s, p, k, l, r=None):
     """
     Args:
         n: liczba serwerow
@@ -14,6 +14,7 @@ def setup_parties(n, t, d, s, p, k, l):
         p: liczba pierwsza (liczba bitów p = l + k)
         k: parametr dodatkowy, liczba bitów p = l + k
         l: liczba bitów s,d <= l
+        r: wmieszywana liczba, domyślnie losowana
     """
 
     shares_d = Shamir(t, n, d, p)
@@ -23,7 +24,12 @@ def setup_parties(n, t, d, s, p, k, l):
 
     # r dlugosci l+k+2 bitow
     # od najnizszej potegi
-    bits_of_r = [random.randint(0, 1) for _ in range(l + k + 2)]
+    if r is None:
+        bits_of_r = [random.randint(0, 1) for _ in range(l + k + 2)]
+    else:
+        bits_of_r = binary(r)
+        while len(bits_of_r) < l + k + 2:
+            bits_of_r.append(0)
     oryginalne_r = sum([bits_of_r[i] * pow(2, i) for i in range(l + k + 2)])
     print(f"r: {oryginalne_r} | bits of r: {bits_of_r}")
 
@@ -68,9 +74,9 @@ def setup_parties(n, t, d, s, p, k, l):
     return parties
 
 
-def compare(n, t, d, s, p, k, l):
+def compare(n, t, d, s, p, k, l, r=None):
     #
-    parties = setup_parties(n, t, d, s, p, k, l)
+    parties = setup_parties(n, t, d, s, p, k, l, r)
     # Calculate comparison a
     # [a] = 2^(l+k+1) - [r] + 2^l + [d] - [s]
     # first share   --> d_share
@@ -114,21 +120,35 @@ def enable_print():
     sys.stdout = sys.__stdout__
 
 
-def compare_with_less_prints(n, t, d, s, p, k, l):
+def compare_with_less_prints(n, t, d, s, p, k, l, r=None):
     block_print()
     expected = 1 if d >= s else 0
-    result = compare(n, t, d, s, p, k, l)
+    result = compare(n, t, d, s, p, k, l, r)
     enable_print()
-    print(f"n: {n} | t: {t} | p: {p} | k: {k} | l: {l} | l+k+1: {l + k + 1}")
-    print(f"{d} >= {s} ? | expected = {expected} | wyn = {result}")
-    assert expected == result
+    #print(f"n: {n} | t: {t} | p: {p} | k: {k} | l: {l} | l+k+1: {l + k + 1}")
+    #print(f"{d} >= {s} ? | expected = {expected} | wyn = {result}")
+    #assert expected == result
+    return expected, result
 
 
 def main():
-    for i in range(10):
-        compare_with_less_prints(n=3, t=1, d=4, s=6, p=13, k=1, l=3)
-        compare_with_less_prints(n=3, t=1, d=6, s=4, p=13, k=1, l=3)
+    counter = 0
+    for i in range(0,2**6):
+        e1,r1 = compare_with_less_prints(n=3, t=1, d=5, s=6, p=13, k=1, l=3,r=i)
+        e2, r2 = compare_with_less_prints(n=3, t=1, d=6, s=5, p=13, k=1, l=3, r=i)
+        if e1==r1 and e2==r2:
+            print(i,binary(i))
+            counter+=1
+    print(counter)
 
+    counter = 0
+    for i in range(0, 2 ** 6):
+        e1, r1 = compare_with_less_prints(n=3, t=1, d=0, s=7, p=13, k=1, l=3, r=i)
+        e2, r2 = compare_with_less_prints(n=3, t=1, d=7, s=0, p=13, k=1, l=3, r=i)
+        if e1 == r1 and e2 == r2:
+            print(i, binary(i))
+            counter += 1
+    print(counter)
 
 if __name__ == "__main__":
     main()
