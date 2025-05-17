@@ -77,6 +77,14 @@ def setup_parties(n, t, d, s, p, k, l, r=None):
 def compare(n, t, d, s, p, k, l, r=None):
     #
     parties = setup_parties(n, t, d, s, p, k, l, r)
+    real_a = (
+                pow(2, l + k + 1)
+                - r
+                + pow(2, l)
+                + d
+                - s
+        )
+
     # Calculate comparison a
     # [a] = 2^(l+k+1) - [r] + 2^l + [d] - [s]
     # first share   --> d_share
@@ -107,7 +115,7 @@ def compare(n, t, d, s, p, k, l, r=None):
 
     print("wynik porównania:", result)
 
-    return result
+    return result, real_a, opened_a
 
 
 # Disable
@@ -123,32 +131,36 @@ def enable_print():
 def compare_with_less_prints(n, t, d, s, p, k, l, r=None):
     block_print()
     expected = 1 if d >= s else 0
-    result = compare(n, t, d, s, p, k, l, r)
+    result, ra, oa = compare(n, t, d, s, p, k, l, r)
     enable_print()
     #print(f"n: {n} | t: {t} | p: {p} | k: {k} | l: {l} | l+k+1: {l + k + 1}")
     #print(f"{d} >= {s} ? | expected = {expected} | wyn = {result}")
-    #assert expected == result
+    # assert expected == result
     return expected, result
 
 
-def main():
-    counter = 0
-    for i in range(0,2**6):
-        e1,r1 = compare_with_less_prints(n=3, t=1, d=5, s=6, p=13, k=1, l=3,r=i)
-        e2, r2 = compare_with_less_prints(n=3, t=1, d=6, s=5, p=13, k=1, l=3, r=i)
-        if e1==r1 and e2==r2:
-            print(i,binary(i))
-            counter+=1
-    print(counter)
+# def main():
+#     counter = 0
+#     for i in range(0,2**6):
+#         e1,r1 = compare_with_less_prints(n=3, t=1, d=5, s=6, p=13, k=1, l=3,r=i)
+#         e2, r2 = compare_with_less_prints(n=3, t=1, d=6, s=5, p=13, k=1, l=3, r=i)
+#         if e1==r1 and e2==r2:
+#             #print(i,binary(i))
+#             counter+=1
+#     #print(counter)
 
-    counter = 0
-    for i in range(0, 2 ** 6):
-        e1, r1 = compare_with_less_prints(n=3, t=1, d=0, s=7, p=13, k=1, l=3, r=i)
-        e2, r2 = compare_with_less_prints(n=3, t=1, d=7, s=0, p=13, k=1, l=3, r=i)
-        if e1 == r1 and e2 == r2:
-            print(i, binary(i))
-            counter += 1
-    print(counter)
+#     counter = 0
+#     for i in range(0, 2 ** 6):
+#         e1, r1 = compare_with_less_prints(n=3, t=1, d=0, s=7, p=13, k=1, l=3, r=i)
+#         e2, r2 = compare_with_less_prints(n=3, t=1, d=7, s=0, p=13, k=1, l=3, r=i)
+#         if e1 == r1 and e2 == r2:
+#             #print(i, binary(i))
+#             counter += 1
+#     #print(counter)
+
+def main():
+    compare(n=3, t=1, d=5, s=6, p=13, k=1, l=3,r=50)
+    compare(n=3, t=1, d=6, s=5, p=13, k=1, l=3,r=50)
 
 if __name__ == "__main__":
     main()
