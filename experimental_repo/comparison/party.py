@@ -227,14 +227,12 @@ class Party:
         first_share = self.__shares[first_share_name]
         second_share = self.__shares[second_share_name]
         self.__comparison_a = (
-                pow(2, l + k + 1)
+                pow(2, l + k + 2)
                 - self.__random_number_share[1]
                 + pow(2, l)
                 + first_share
                 - second_share
         )
-
-        # print(self.__comparison_a)
 
     def get_comparison_a(self):
         return self.__comparison_a
@@ -246,16 +244,19 @@ class Party:
             a_bin.append(0)
         self.__comparison_a_bits = a_bin
 
-        self.__z_table = [None for _ in range(l)]
-        self.__Z_table = [None for _ in range(l)]
+        if self.__id==1:
+            print("a",opened_a,self.__comparison_a_bits)
 
-        for i in range(l - 1, -1, -1):
-            self.__z_table[i] = self.__comparison_a_bits[i]  # XOR self.__random_number_bit_shares[i][1]
+        self.__z_table = [None for _ in range(l+1)]
+        self.__Z_table = [None for _ in range(l+1)]
+
+        for i in range(l, -1, -1):
+            self.__z_table[i] = self.__comparison_a_bits[i]  #  XOR self.__random_number_bit_shares[i][1]
             self.__Z_table[i] = self.__comparison_a_bits[i]
 
-        self.set_shares("z", self.get_share_by_name("z"))
-        self.set_shares("Z", self.get_share_by_name("Z"))
-        # print(self.__z_table,self.__Z_table)
+        if self.__id==1:
+            print("z",self.__z_table)
+            print("Z",self.__Z_table)
 
     def initialize_z_and_Z(self, l):
         self.set_shares("z", self.__z_table[l - 1])
@@ -316,6 +317,7 @@ class Party:
               self.get_share_by_name("Z"))  # ,self.__z_table,self.__Z_table)
 
     def print_test_2(self):
-        print(self.__z_table, self.__Z_table)
+        print("z",self.__z_table)
+        print("Z",self.__Z_table)
         print("x", self.get_share_by_name("x"), "y", self.get_share_by_name("y"), "X", self.get_share_by_name("X"), "Y",
               self.get_share_by_name("Y"))

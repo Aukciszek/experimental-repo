@@ -41,7 +41,7 @@ def computate_coefficients(shares, p):
         for j, (x_j, _) in enumerate(shares):
             if i != j:
                 li *= x_j * binary_exponentiation(x_j - x_i, -1, p)
-                li %= p
+                # li %= p
         coefficients.append(li)
 
     return coefficients
@@ -52,6 +52,6 @@ def reconstruct_secret(shares, coefficients, p):
 
     for i, (_, y_i) in enumerate(shares):
         secret += y_i * coefficients[i]
-        secret %= p
+        # secret %= p
 
     return secret

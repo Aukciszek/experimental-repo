@@ -99,8 +99,12 @@ def compare(n, t, d, s, p, k, l, r=None):
         party = parties[i]
         a_comparison_share[i] = (i + 1, party.get_comparison_a())
 
-    coefficients = computate_coefficients(a_comparison_share, p)
-    opened_a = reconstruct_secret(a_comparison_share, coefficients, p)
+    print(a_comparison_share)
+    selected_shares=[a_comparison_share[random.randint(1,n)-1]]
+    print(selected_shares)
+    print(selected_shares[0][1]%p)
+    coefficients = computate_coefficients(selected_shares, p)
+    opened_a = reconstruct_secret(selected_shares, coefficients, p)
     print("opened_a = ", opened_a)
 
     # Compare s,d and save the resulting shares in share named "res"
@@ -139,28 +143,33 @@ def compare_with_less_prints(n, t, d, s, p, k, l, r=None):
     return expected, result
 
 
-# def main():
-#     counter = 0
-#     for i in range(0,2**6):
-#         e1,r1 = compare_with_less_prints(n=3, t=1, d=5, s=6, p=13, k=1, l=3,r=i)
-#         e2, r2 = compare_with_less_prints(n=3, t=1, d=6, s=5, p=13, k=1, l=3, r=i)
-#         if e1==r1 and e2==r2:
-#             #print(i,binary(i))
-#             counter+=1
-#     #print(counter)
-
-#     counter = 0
-#     for i in range(0, 2 ** 6):
-#         e1, r1 = compare_with_less_prints(n=3, t=1, d=0, s=7, p=13, k=1, l=3, r=i)
-#         e2, r2 = compare_with_less_prints(n=3, t=1, d=7, s=0, p=13, k=1, l=3, r=i)
-#         if e1 == r1 and e2 == r2:
-#             #print(i, binary(i))
-#             counter += 1
-#     #print(counter)
-
 def main():
-    compare(n=3, t=1, d=5, s=6, p=13, k=1, l=3,r=50)
-    compare(n=3, t=1, d=6, s=5, p=13, k=1, l=3,r=50)
+    p=61
+    counter = 0
+    for i in range(0,2**6):
+        e1,r1 = compare_with_less_prints(n=3, t=1, d=5, s=6, p=61, k=1, l=3,r=i)
+        e2, r2 = compare_with_less_prints(n=3, t=1, d=6, s=5, p=61, k=1, l=3, r=i)
+        if e1%p!=r1%p or e2%p!=r2%p:
+            #print(i,binary(i))
+            counter+=1
+    print(counter,2**6)
+
+    counter = 0
+    for i in range(0, 2 ** 6):
+        e1, r1 = compare_with_less_prints(n=3, t=1, d=0, s=7, p=61, k=1, l=3, r=i)
+        e2, r2 = compare_with_less_prints(n=3, t=1, d=7, s=0, p=61, k=1, l=3, r=i)
+        if e1%p != r1%p or e2%p != r2%p:
+            #print(i, binary(i))
+            counter += 1
+    print(counter,2**6)
+
+def main2():
+
+    e1, r1 = compare_with_less_prints(n=5, t=2, d=5, s=6, p=61, k=1, l=3,r=50)
+    print(e1%61,r1%61)
+    e1, r1 = compare_with_less_prints(n=5, t=2, d=6, s=5, p=61, k=1, l=3,r=50)
+    print(e1%61,r1%61)
 
 if __name__ == "__main__":
     main()
+    main2()

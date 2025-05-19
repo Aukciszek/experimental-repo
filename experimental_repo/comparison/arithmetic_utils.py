@@ -6,6 +6,8 @@ binary_internal = lambda n: n > 0 and [n & 1] + binary_internal(n >> 1) or []
 def binary(n):
     if n == 0:
         return [0]
+    elif n < 0:
+        return binary_internal(-n)
     else:
         return binary_internal(n)
 
