@@ -2,6 +2,7 @@ import copy
 import os
 import random
 
+
 # random.seed(2137)
 # print("Seed test: ",random.randint(0,100))
 
@@ -152,7 +153,7 @@ def multiply_matrix(matrix1, matrix2, modulus):
     for i in range(n):
         for j in range(m):
             result[i][j] = (
-                sum(matrix1[i][k] * matrix2[k][j] % modulus for k in range(l)) % modulus
+                    sum(matrix1[i][k] * matrix2[k][j] % modulus for k in range(l)) % modulus
             )
 
     return result
@@ -168,8 +169,8 @@ class Party:
         self.__p = p
         self.__parties = None
         self.__A = None
-        self.__q = None # to co sam losuje
-        self.__shared_q = [None] * n    # to co dostaje od innych
+        self.__q = None  # to co sam losuje
+        self.__shared_q = [None] * n  # to co dostaje od innych
         self.__r = None
         self.__shared_r = [None] * n
         self.__multiplicative_share = None
@@ -206,13 +207,13 @@ class Party:
             P[i][i] = 1
 
         self.__A = multiply_matrix(multiply_matrix(B_inv, P, self.__p), B, self.__p)
-    
+
     def calculate_q(self):
         if self.__q is not None:
             raise ValueError("q already calculated.")
 
         self.__q = [0] * self.__n
-        self.__q = Shamir(2*self.__t, self.__n, k0=0,p=self.__p)
+        self.__q = Shamir(2 * self.__t, self.__n, k0=0, p=self.__p)
 
     # set q to other parties
     def _set_q(self, party_id, shared_q):
@@ -243,7 +244,7 @@ class Party:
         # add sum of qs in multiplied shares
         qs = [x[1] for x in self.__shared_q]
 
-        multiplied_shares = ((first_share * second_share) + sum(qs) ) % self.__p # f(1)g(1) + q1(1) + q2(1) + ...
+        multiplied_shares = ((first_share * second_share) + sum(qs)) % self.__p  # f(1)g(1) + q1(1) + q2(1) + ...
 
         for i in range(self.__n):
             self.__r[i] = (multiplied_shares * self.__A[self.__id - 1][i]) % self.__p
@@ -267,16 +268,16 @@ class Party:
             raise ValueError("Coefficient already calculated.")
 
         self.__multiplicative_share = (
-            sum([self.__shared_r[i] for i in range(self.__n)]) % self.__p
+                sum([self.__shared_r[i] for i in range(self.__n)]) % self.__p
         )
 
     def get_multiplicative_share(self):
         return self.__multiplicative_share
-    
+
     def calculate_additive_share(self, first_share_name: str, second_share_name: str):
         if self.__additive_share is not None:
             raise ValueError("Coefficient already calculated.")
-        
+
         first_share = self.__shares[first_share_name]
         second_share = self.__shares[second_share_name]
 
@@ -284,21 +285,23 @@ class Party:
 
     def get_additive_share(self):
         return self.__additive_share
-    
+
     def calculate_xor_share(self):
-        self.__xor_share = self.__additive_share - 2*self.__multiplicative_share
+        self.__xor_share = self.__additive_share - 2 * self.__multiplicative_share
 
     def get_xor_share(self):
         return self.__xor_share
-    
-    def set_share_to_additive_share(self, share_name:str):
+
+    def set_share_to_additive_share(self, share_name: str):
         self.__shares[share_name] = self.__additive_share
-    def set_share_to_multiplicative_share(self, share_name:str):
+
+    def set_share_to_multiplicative_share(self, share_name: str):
         self.__shares[share_name] = self.__multiplicative_share
-    def set_share_to_xor_share(self, share_name:str):
+
+    def set_share_to_xor_share(self, share_name: str):
         self.__shares[share_name] = self.__xor_share
-    
-    def share_exists(self,share_name:str):
+
+    def share_exists(self, share_name: str):
         res = None
         try:
             if self.__shares[share_name] is not None:
@@ -308,9 +311,9 @@ class Party:
         except KeyError as e:
             res = False
         return res
-    
-    def get_share_by_name(self,share_name:str):
-        res=None
+
+    def get_share_by_name(self, share_name: str):
+        res = None
         if self.share_exists(share_name):
             res = self.__shares[share_name]
         return res
@@ -326,15 +329,14 @@ class Party:
 
 
 def f(x, coefficients, p, t):
-    return sum([coefficients[i] * x**i for i in range(t)]) % p
+    return sum([coefficients[i] * x ** i for i in range(t)]) % p
 
 
 def Shamir(t, n, k0, p):
-
     coefficients = [random.randint(0, p - 1) for _ in range(t)]
     coefficients[0] = k0
 
-    if coefficients[-1] == 0 and len(coefficients)>1:
+    if coefficients[-1] == 0 and len(coefficients) > 1:
         coefficients[-1] = random.randint(1, p - 1)
 
     shares = []
@@ -368,39 +370,42 @@ def reconstruct_secret(shares, coefficients, p):
 
     return secret
 
+
 # x XOR y = (x+y) - 2*(x*y)
-def calculate_XOR(parties, first_share_name:str, second_share_name:str,result_share_name:str):
-        # 1. self.__additive_share = x + y
-        for party in parties:
-            party.calculate_additive_share(first_share_name,second_share_name)
-        # 2. self.__multiplicative_share = x * y
-        for party in parties:
-            party.calculate_q()
-        for party in parties:
-            party.send_q()
-        for party in parties:
-            party.calculate_r(first_share_name,second_share_name)
-        for party in parties:
-            party.send_r()
-        for party in parties:
-            party.calculate_multiplicative_share()
-        # 3. self.__xor_share = self.__additive_share - 2 * self._multiplicative_share
-        for party in parties:
-            party.calculate_xor_share()
-            if not party.share_exists(result_share_name):
-                party.set_shares(result_share_name,None)
-            party.set_share_to_xor_share(result_share_name)
+def calculate_XOR(parties, first_share_name: str, second_share_name: str, result_share_name: str):
+    # 1. self.__additive_share = x + y
+    for party in parties:
+        party.calculate_additive_share(first_share_name, second_share_name)
+    # 2. self.__multiplicative_share = x * y
+    for party in parties:
+        party.calculate_q()
+    for party in parties:
+        party.send_q()
+    for party in parties:
+        party.calculate_r(first_share_name, second_share_name)
+    for party in parties:
+        party.send_r()
+    for party in parties:
+        party.calculate_multiplicative_share()
+    # 3. self.__xor_share = self.__additive_share - 2 * self._multiplicative_share
+    for party in parties:
+        party.calculate_xor_share()
+        if not party.share_exists(result_share_name):
+            party.set_shares(result_share_name, None)
+        party.set_share_to_xor_share(result_share_name)
+
 
 def reset_parties(parties):
     for party in parties:
         party.reset()
+
 
 def main():
     # parameters
     t = 2
     n = 5
     p = 13
-    
+
     # Create parties
     parties = []
     for i in range(n):
@@ -418,43 +423,43 @@ def main():
         party.calculate_A()
 
     # Set bit shares
-    karol1=[1,0,1,0,1]
-    karol2=[1,0,0,1,1]
+    karol1 = [1, 0, 1, 0, 1]
+    karol2 = [1, 0, 0, 1, 1]
     for b in range(len(karol1)):
-        karol1_shares_of_bit = Shamir(t,n,karol1[b],p)
-        karol2_shares_of_bit = Shamir(t,n,karol2[b],p)
+        karol1_shares_of_bit = Shamir(t, n, karol1[b], p)
+        karol2_shares_of_bit = Shamir(t, n, karol2[b], p)
         for i in range(n):
-            parties[i].set_shares("karol1_share_of_bit_"+str(b),karol1_shares_of_bit[i][1])
-            parties[i].set_shares("karol2_share_of_bit_"+str(b),karol2_shares_of_bit[i][1])
+            parties[i].set_shares("karol1_share_of_bit_" + str(b), karol1_shares_of_bit[i][1])
+            parties[i].set_shares("karol2_share_of_bit_" + str(b), karol2_shares_of_bit[i][1])
 
     # XOR bit pairs
     for b in range(len(karol1)):
-        calculate_XOR(parties,"karol1_share_of_bit_"+str(b),"karol2_share_of_bit_"+str(b),"karol_xor_share_"+str(b))
+        calculate_XOR(parties, "karol1_share_of_bit_" + str(b), "karol2_share_of_bit_" + str(b),
+                      "karol_xor_share_" + str(b))
         reset_parties(parties)
-    
+
     # Resconstruct XOR results
-    for b in range(len(karol1)):        
-        karol_xor_share_name = "karol_xor_share_"+str(b)
+    for b in range(len(karol1)):
+        karol_xor_share_name = "karol_xor_share_" + str(b)
         karol_xor_shares = [(0, 0)] * n
         for i in range(n):
             karol_xor_shares[i] = (i + 1, parties[i].get_share_by_name(karol_xor_share_name))
 
-        #print("Selected Shares for Reconstruction:")
+        # print("Selected Shares for Reconstruction:")
         indeksy = [_ for _ in range(n)]
         pom1 = random.choice(indeksy)
-        indeksy.pop(pom1)
+        indeksy.remove(pom1)
         pom2 = random.choice(indeksy)
         selected_shares = [karol_xor_shares[pom1], karol_xor_shares[pom2]]
-        #print(selected_shares)
+        # print(selected_shares)
 
         coefficients = computate_coefficients(selected_shares, p)
-        #print("coefficients = ", coefficients)
+        # print("coefficients = ", coefficients)
         secret = reconstruct_secret(selected_shares, coefficients, p)
 
         print(karol_xor_share_name)
-        print("x,y,x^y\t\t",karol1[b],karol2[b],karol1[b]^karol2[b])
-        print("reconstructed\t    ",secret)
-
+        print("x,y,x^y\t\t", karol1[b], karol2[b], karol1[b] ^ karol2[b])
+        print("reconstructed\t    ", secret)
 
 
 if __name__ == "__main__":

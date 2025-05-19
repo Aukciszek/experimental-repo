@@ -99,27 +99,31 @@ def comparison(parties: list, opened_a: int, l: int, k: int):
         calculate_z_tables(parties, l)
     for party in parties:
         party.initialize_z_and_Z(l)
+    parties[0].print_test_z_tables()
     # Romb the bits
     for i in range(l - 1, -1, -1):
         # set x,y,X,Y
         for party in parties:
             party.prepare_for_next_romb(i)
         parties[0].print_test_2()
-        parties[0].print_test_1()
         ### x AND y
         multiply_shares(parties, "x", "y", "z")
         reset_parties(parties)
+        print("x AND y", end="\t" * 5)
         parties[0].print_test_1()
         ### X XOR Y
         xor_shares(parties, "X", "Y", "Z")
         reset_parties(parties)
-        parties[0].print_test_1()
+        # print("X XOR Y",end="\t"*5)
+        # parties[0].print_test_1()
         ### x AND (X XOR Y)
         multiply_shares(parties, "x", "Z", "Z")
         reset_parties(parties)
-        parties[0].print_test_1()
+        # print("x AND (X XOR Y)",end="\t"*3)
+        # parties[0].print_test_1()
         ### x AND (X XOR Y) XOR X
         xor_shares(parties, "Z", "X", "Z")
+        print("x AND (X XOR Y) XOR X", end="\t" * 1)
         parties[0].print_test_1()
         reset_parties(parties)
     # calculate result
@@ -129,6 +133,8 @@ def comparison(parties: list, opened_a: int, l: int, k: int):
     xor_shares(parties, "a_l", "r_l", "res")
     reset_parties(parties)
     xor_shares(parties, "res", "Z", "res")
+    print("a_l XOR r_l XOR Z", end="\t" * 2)
+    parties[0].print_test_3()
     reset_parties(parties)
     # shares of the result are now stored in share named "res"
 
@@ -213,8 +219,17 @@ def main():
         party = parties[i]
         a_comparison_share[i] = (i + 1, party.get_comparison_a())
 
-    coefficients = computate_coefficients(a_comparison_share, p)
-    opened_a = reconstruct_secret(a_comparison_share, coefficients, p)
+    # Select shares for reconstruction
+    indeksy = [_ for _ in range(n)]
+    wybrane_indeksy = []
+    for _ in range(t):
+        w = random.choice(indeksy)
+        wybrane_indeksy.append(w)
+        indeksy.remove(w)
+    selected_shares = [a_comparison_share[_] for _ in wybrane_indeksy]
+    # print(selected_shares)
+    coefficients = computate_coefficients(selected_shares, p)
+    opened_a = reconstruct_secret(selected_shares, coefficients, p)
     print("opened_a = ", opened_a)
 
     # Compare s,d and save the resulting shares in share named "res"
@@ -222,8 +237,16 @@ def main():
     # d < s   -->  res=0
     comparison(parties, opened_a, l, k)
 
+    # Select shares for reconstruction
+    indeksy = [_ for _ in range(n)]
+    wybrane_indeksy = []
+    for _ in range(t):
+        w = random.choice(indeksy)
+        wybrane_indeksy.append(w)
+        indeksy.remove(w)
+    selected_shares = [(i, parties[i].get_share_by_name("res")) for i in wybrane_indeksy]
+    # print(selected_shares)
     # Reconstruct res
-    selected_shares = [(i, parties[i].get_share_by_name("res")) for i in range(n)]
     coefficients = computate_coefficients(selected_shares, p)
     result = reconstruct_secret(selected_shares, coefficients, p)
 

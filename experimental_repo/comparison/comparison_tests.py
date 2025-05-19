@@ -46,7 +46,7 @@ def setup_parties(n, t, d, s, p, k, l, r=None):
     for shares_of_bit in shares_of_bits_of_r:
         for i in range(n):
             shares_for_clients[i].append(shares_of_bit[i])
-    print(f"shares_for_clients {shares_for_clients}")
+    # print(f"shares_for_clients {shares_for_clients}")
 
     # Create parties
     parties = []
@@ -71,19 +71,12 @@ def setup_parties(n, t, d, s, p, k, l, r=None):
         party.set_random_number_bit_shares(shares_for_clients[i])
         party.calculate_share_of_random_number()
 
-    return parties
+    return parties, bits_of_r
 
 
 def compare(n, t, d, s, p, k, l, r=None):
     #
-    parties = setup_parties(n, t, d, s, p, k, l, r)
-    real_a = (
-            pow(2, l + k + 1)
-            - r
-            + pow(2, l)
-            + d
-            - s
-    )
+    parties, bits_of_r = setup_parties(n, t, d, s, p, k, l, r)
 
     # Calculate comparison a
     # [a] = 2^(l+k+1) - [r] + 2^l + [d] - [s]
@@ -99,27 +92,46 @@ def compare(n, t, d, s, p, k, l, r=None):
         party = parties[i]
         a_comparison_share[i] = (i + 1, party.get_comparison_a())
 
-    print(a_comparison_share)
-    selected_shares = [a_comparison_share[random.randint(1, n) - 1]]
-    print(selected_shares)
-    print(selected_shares[0][1] % p)
+    # Select shares for reconstruction
+    indeksy = [_ for _ in range(n)]
+    wybrane_indeksy = []
+    for _ in range(t):
+        w = random.choice(indeksy)
+        wybrane_indeksy.append(w)
+        indeksy.remove(w)
+    selected_shares = [a_comparison_share[_] for _ in wybrane_indeksy]
+    # print(selected_shares)
     coefficients = computate_coefficients(selected_shares, p)
     opened_a = reconstruct_secret(selected_shares, coefficients, p)
-    print("opened_a = ", opened_a)
+    # print("opened_a = ", opened_a)
+    a_bin = binary(opened_a)
+    while len(a_bin) < l + k:
+        a_bin.append(0)
+    comparison_a_bits = a_bin
+    print(f"a {opened_a} \t{comparison_a_bits}")
+    print(f"r {r} \t{bits_of_r}")
 
     # Compare s,d and save the resulting shares in share named "res"
     # d >= s  -->  res=1
     # d < s   -->  res=0
     comparison(parties, opened_a, l, k)
 
+    # Select shares for reconstruction
+    indeksy = [_ for _ in range(n)]
+    wybrane_indeksy = []
+    for _ in range(t):
+        w = random.choice(indeksy)
+        wybrane_indeksy.append(w)
+        indeksy.remove(w)
+    selected_shares = [(i, parties[i].get_share_by_name("res")) for i in wybrane_indeksy]
+    # print(selected_shares)
     # Reconstruct res
-    selected_shares = [(i, parties[i].get_share_by_name("res")) for i in range(n)]
     coefficients = computate_coefficients(selected_shares, p)
     result = reconstruct_secret(selected_shares, coefficients, p)
 
     print("wynik porównania:", result)
 
-    return result, real_a, opened_a
+    return result
 
 
 # Disable
@@ -134,13 +146,12 @@ def enable_print():
 
 def compare_with_less_prints(n, t, d, s, p, k, l, r=None):
     block_print()
-    expected = 1 if d >= s else 0
-    result, ra, oa = compare(n, t, d, s, p, k, l, r)
+    result = compare(n, t, d, s, p, k, l, r)
     enable_print()
     # print(f"n: {n} | t: {t} | p: {p} | k: {k} | l: {l} | l+k+1: {l + k + 1}")
     # print(f"{d} >= {s} ? | expected = {expected} | wyn = {result}")
     # assert expected == result
-    return expected, result
+    return result
 
 
 def main():
@@ -171,6 +182,49 @@ def main2():
     print(e1 % 61, r1 % 61)
 
 
+def main3():
+    l = 2
+    k = 1
+    p = 5
+    licznik_zlych = 0
+    for random_number in range(0, 2 ** l + k):
+        for d in range(2 ** l):
+            for s in range(2 ** l):
+                expected_result = (d >= s)
+                result = compare(n=3, t=1, d=d, s=s, p=p, k=k, l=l, r=random_number)
+                if (expected_result != result % p):
+                    licznik_zlych += 1
+                    print("zle")
+                print("\n", "-" * 100, "\n")
+    print("liczniek_zlych", licznik_zlych)
+
+
+def petla(n, t, p, k, l):
+    print(f"n {n} t {t} l {l} k {k} p {p}")
+    licznik_zlych = 0
+    for random_number in range(0, 2 ** l + k):
+        for d in range(2 ** l):
+            for s in range(2 ** l):
+                expected_result = (d >= s)
+                result = compare_with_less_prints(n=n, t=t, d=d, s=s, p=p, k=k, l=l, r=random_number)
+                if (expected_result != result % p):
+                    licznik_zlych += 1
+                    # print("zle")
+                # print("\n", "-" * 100, "\n")
+    print("licznik_zlych", licznik_zlych, "/", (2 ** l + k) * (2 ** l) * (2 ** l))
+
+
+def main4():
+    petla(n=3, t=1, p=5, k=1, l=2)
+    petla(n=3, t=1, p=7, k=1, l=2)
+    petla(n=3, t=1, p=13, k=1, l=3)
+    petla(n=5, t=1, p=7, k=1, l=2)
+    petla(n=5, t=2, p=7, k=1, l=2)
+    petla(n=5, t=2, p=13, k=1, l=3)
+
+
 if __name__ == "__main__":
-    main()
-    main2()
+    # main()
+    # main2()
+    # main3()
+    main4()

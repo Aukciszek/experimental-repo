@@ -244,8 +244,8 @@ class Party:
             a_bin.append(0)
         self.__comparison_a_bits = a_bin
 
-        if self.__id == 1:
-            print("a", opened_a, self.__comparison_a_bits)
+        # if self.__id == 1:
+        #     print("a", opened_a, "\t", self.__comparison_a_bits)
 
         self.__z_table = [None for _ in range(l + 1)]
         self.__Z_table = [None for _ in range(l + 1)]
@@ -254,9 +254,9 @@ class Party:
             self.__z_table[i] = self.__comparison_a_bits[i]  # XOR self.__random_number_bit_shares[i][1]
             self.__Z_table[i] = self.__comparison_a_bits[i]
 
-        if self.__id == 1:
-            print("z", self.__z_table)
-            print("Z", self.__Z_table)
+        # if self.__id == 1:
+        #     print("z", self.__z_table)
+        #     print("Z", self.__Z_table)
 
     def initialize_z_and_Z(self, l):
         self.set_shares("z", self.__z_table[l - 1])
@@ -313,11 +313,17 @@ class Party:
         self.set_shares("r_l", self.__random_number_bit_shares[random_number_bit_share_index][1])
 
     def print_test_1(self):
-        print("id", self.__id, "z", self.get_share_by_name("z"), "Z",
+        print("z", self.get_share_by_name("z"), "Z",
               self.get_share_by_name("Z"))  # ,self.__z_table,self.__Z_table)
 
     def print_test_2(self):
-        print("z", self.__z_table)
-        print("Z", self.__Z_table)
         print("x", self.get_share_by_name("x"), "y", self.get_share_by_name("y"), "X", self.get_share_by_name("X"), "Y",
               self.get_share_by_name("Y"))
+
+    def print_test_3(self):
+        print("a_l", self.get_share_by_name("a_l"), "r_l", self.get_share_by_name("r_l"), "Z",
+              self.get_share_by_name("Z"), "res", self.get_share_by_name("res"))
+
+    def print_test_z_tables(self):
+        print("z", self.__z_table)
+        print("Z", self.__Z_table)
