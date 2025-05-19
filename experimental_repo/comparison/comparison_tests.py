@@ -78,12 +78,12 @@ def compare(n, t, d, s, p, k, l, r=None):
     #
     parties = setup_parties(n, t, d, s, p, k, l, r)
     real_a = (
-                pow(2, l + k + 1)
-                - r
-                + pow(2, l)
-                + d
-                - s
-        )
+            pow(2, l + k + 1)
+            - r
+            + pow(2, l)
+            + d
+            - s
+    )
 
     # Calculate comparison a
     # [a] = 2^(l+k+1) - [r] + 2^l + [d] - [s]
@@ -100,9 +100,9 @@ def compare(n, t, d, s, p, k, l, r=None):
         a_comparison_share[i] = (i + 1, party.get_comparison_a())
 
     print(a_comparison_share)
-    selected_shares=[a_comparison_share[random.randint(1,n)-1]]
+    selected_shares = [a_comparison_share[random.randint(1, n) - 1]]
     print(selected_shares)
-    print(selected_shares[0][1]%p)
+    print(selected_shares[0][1] % p)
     coefficients = computate_coefficients(selected_shares, p)
     opened_a = reconstruct_secret(selected_shares, coefficients, p)
     print("opened_a = ", opened_a)
@@ -137,38 +137,39 @@ def compare_with_less_prints(n, t, d, s, p, k, l, r=None):
     expected = 1 if d >= s else 0
     result, ra, oa = compare(n, t, d, s, p, k, l, r)
     enable_print()
-    #print(f"n: {n} | t: {t} | p: {p} | k: {k} | l: {l} | l+k+1: {l + k + 1}")
-    #print(f"{d} >= {s} ? | expected = {expected} | wyn = {result}")
+    # print(f"n: {n} | t: {t} | p: {p} | k: {k} | l: {l} | l+k+1: {l + k + 1}")
+    # print(f"{d} >= {s} ? | expected = {expected} | wyn = {result}")
     # assert expected == result
     return expected, result
 
 
 def main():
-    p=61
+    p = 61
     counter = 0
-    for i in range(0,2**6):
-        e1,r1 = compare_with_less_prints(n=3, t=1, d=5, s=6, p=61, k=1, l=3,r=i)
+    for i in range(0, 2 ** 6):
+        e1, r1 = compare_with_less_prints(n=3, t=1, d=5, s=6, p=61, k=1, l=3, r=i)
         e2, r2 = compare_with_less_prints(n=3, t=1, d=6, s=5, p=61, k=1, l=3, r=i)
-        if e1%p!=r1%p or e2%p!=r2%p:
-            #print(i,binary(i))
-            counter+=1
-    print(counter,2**6)
+        if e1 % p != r1 % p or e2 % p != r2 % p:
+            # print(i,binary(i))
+            counter += 1
+    print(counter, 2 ** 6)
 
     counter = 0
     for i in range(0, 2 ** 6):
         e1, r1 = compare_with_less_prints(n=3, t=1, d=0, s=7, p=61, k=1, l=3, r=i)
         e2, r2 = compare_with_less_prints(n=3, t=1, d=7, s=0, p=61, k=1, l=3, r=i)
-        if e1%p != r1%p or e2%p != r2%p:
-            #print(i, binary(i))
+        if e1 % p != r1 % p or e2 % p != r2 % p:
+            # print(i, binary(i))
             counter += 1
-    print(counter,2**6)
+    print(counter, 2 ** 6)
+
 
 def main2():
+    e1, r1 = compare_with_less_prints(n=5, t=2, d=5, s=6, p=61, k=1, l=3, r=50)
+    print(e1 % 61, r1 % 61)
+    e1, r1 = compare_with_less_prints(n=5, t=2, d=6, s=5, p=61, k=1, l=3, r=50)
+    print(e1 % 61, r1 % 61)
 
-    e1, r1 = compare_with_less_prints(n=5, t=2, d=5, s=6, p=61, k=1, l=3,r=50)
-    print(e1%61,r1%61)
-    e1, r1 = compare_with_less_prints(n=5, t=2, d=6, s=5, p=61, k=1, l=3,r=50)
-    print(e1%61,r1%61)
 
 if __name__ == "__main__":
     main()

@@ -218,7 +218,7 @@ class Party:
 
     def get_random_number_share(self):
         return self.__random_number_share
-    
+
     # Calculate comparison a
     # [a] = 2^(l+k+1) - [r] + 2^l + [d] - [s]
     # first share   --> d_share
@@ -244,19 +244,19 @@ class Party:
             a_bin.append(0)
         self.__comparison_a_bits = a_bin
 
-        if self.__id==1:
-            print("a",opened_a,self.__comparison_a_bits)
+        if self.__id == 1:
+            print("a", opened_a, self.__comparison_a_bits)
 
-        self.__z_table = [None for _ in range(l+1)]
-        self.__Z_table = [None for _ in range(l+1)]
+        self.__z_table = [None for _ in range(l + 1)]
+        self.__Z_table = [None for _ in range(l + 1)]
 
         for i in range(l, -1, -1):
-            self.__z_table[i] = self.__comparison_a_bits[i]  #  XOR self.__random_number_bit_shares[i][1]
+            self.__z_table[i] = self.__comparison_a_bits[i]  # XOR self.__random_number_bit_shares[i][1]
             self.__Z_table[i] = self.__comparison_a_bits[i]
 
-        if self.__id==1:
-            print("z",self.__z_table)
-            print("Z",self.__Z_table)
+        if self.__id == 1:
+            print("z", self.__z_table)
+            print("Z", self.__Z_table)
 
     def initialize_z_and_Z(self, l):
         self.set_shares("z", self.__z_table[l - 1])
@@ -308,16 +308,16 @@ class Party:
     ### do obliczenia wyniku porownania
     # [res] = a_l XOR [r_l] XOR [Z]
 
-    def prepare_shares_for_res_xors(self,comparison_a_bit_index, random_number_bit_share_index):
-        self.set_shares("a_l",self.__comparison_a_bits[comparison_a_bit_index])
-        self.set_shares("r_l",self.__random_number_bit_shares[random_number_bit_share_index][1])
+    def prepare_shares_for_res_xors(self, comparison_a_bit_index, random_number_bit_share_index):
+        self.set_shares("a_l", self.__comparison_a_bits[comparison_a_bit_index])
+        self.set_shares("r_l", self.__random_number_bit_shares[random_number_bit_share_index][1])
 
     def print_test_1(self):
         print("id", self.__id, "z", self.get_share_by_name("z"), "Z",
               self.get_share_by_name("Z"))  # ,self.__z_table,self.__Z_table)
 
     def print_test_2(self):
-        print("z",self.__z_table)
-        print("Z",self.__Z_table)
+        print("z", self.__z_table)
+        print("Z", self.__Z_table)
         print("x", self.get_share_by_name("x"), "y", self.get_share_by_name("y"), "X", self.get_share_by_name("X"), "Y",
               self.get_share_by_name("Y"))

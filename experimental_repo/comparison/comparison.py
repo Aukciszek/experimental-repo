@@ -125,10 +125,10 @@ def comparison(parties: list, opened_a: int, l: int, k: int):
     # calculate result
     # [res] = a_l XOR [r_l] XOR [Z]
     for party in parties:
-        party.prepare_shares_for_res_xors(l,l)
-    xor_shares(parties,"a_l","r_l","res")
+        party.prepare_shares_for_res_xors(l, l)
+    xor_shares(parties, "a_l", "r_l", "res")
     reset_parties(parties)
-    xor_shares(parties,"res","Z","res")
+    xor_shares(parties, "res", "Z", "res")
     reset_parties(parties)
     # shares of the result are now stored in share named "res"
 
