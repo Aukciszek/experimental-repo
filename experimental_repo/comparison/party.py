@@ -227,7 +227,7 @@ class Party:
         first_share = self.__shares[first_share_name]
         second_share = self.__shares[second_share_name]
         self.__comparison_a = (
-                pow(2, l + k + 2)
+                pow(2, l + k + 1)
                 - self.__random_number_share[1]
                 + pow(2, l)
                 + first_share
@@ -247,10 +247,10 @@ class Party:
         # if self.__id == 1:
         #     print("a", opened_a, "\t", self.__comparison_a_bits)
 
-        self.__z_table = [None for _ in range(l + 1)]
-        self.__Z_table = [None for _ in range(l + 1)]
+        self.__z_table = [None for _ in range(l)]
+        self.__Z_table = [None for _ in range(l)]
 
-        for i in range(l, -1, -1):
+        for i in range(l-1, -1, -1):
             self.__z_table[i] = self.__comparison_a_bits[i]  # XOR self.__random_number_bit_shares[i][1]
             self.__Z_table[i] = self.__comparison_a_bits[i]
 
@@ -303,6 +303,8 @@ class Party:
     def set_z_table_to_xor_share(self, index):
         # print(self.__xor_share)
         self.__z_table[index] = self.__xor_share
+        if index==0:
+            print(self.__id,self.__z_table[index])
         # print(self.__z_table[index])
 
     ### do obliczenia wyniku porownania
@@ -313,11 +315,11 @@ class Party:
         self.set_shares("r_l", self.__random_number_bit_shares[random_number_bit_share_index][1])
 
     def print_test_1(self):
-        print("z", self.get_share_by_name("z"), "Z",
+        print("z",self.__id, self.get_share_by_name("z"), "Z",
               self.get_share_by_name("Z"))  # ,self.__z_table,self.__Z_table)
 
     def print_test_2(self):
-        print("x", self.get_share_by_name("x"), "y", self.get_share_by_name("y"), "X", self.get_share_by_name("X"), "Y",
+        print(self.__id,"x", self.get_share_by_name("x"), "y", self.get_share_by_name("y"), "X", self.get_share_by_name("X"), "Y",
               self.get_share_by_name("Y"))
 
     def print_test_3(self):

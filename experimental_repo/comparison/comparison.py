@@ -99,13 +99,14 @@ def comparison(parties: list, opened_a: int, l: int, k: int):
         calculate_z_tables(parties, l)
     for party in parties:
         party.initialize_z_and_Z(l)
+    print("po xorze gornego rzedu")
     parties[0].print_test_z_tables()
     # Romb the bits
     for i in range(l - 1, -1, -1):
         # set x,y,X,Y
         for party in parties:
             party.prepare_for_next_romb(i)
-        parties[0].print_test_2()
+            party.print_test_2()
         ### x AND y
         multiply_shares(parties, "x", "y", "z")
         reset_parties(parties)
@@ -124,12 +125,25 @@ def comparison(parties: list, opened_a: int, l: int, k: int):
         ### x AND (X XOR Y) XOR X
         xor_shares(parties, "Z", "X", "Z")
         print("x AND (X XOR Y) XOR X", end="\t" * 1)
-        parties[0].print_test_1()
+        for party in parties:
+            party.print_test_1()
         reset_parties(parties)
     # calculate result
     # [res] = a_l XOR [r_l] XOR [Z]
     for party in parties:
         party.prepare_shares_for_res_xors(l, l)
+
+    selected_shares = [(1, parties[0].get_share_by_name("a_l")), (4, parties[3].get_share_by_name("a_l"))]
+    print(selected_shares)
+    coefficients = computate_coefficients(selected_shares, 1013)
+    opened = reconstruct_secret(selected_shares, coefficients, 1013)
+    print("opened a_l = ", opened)
+    selected_shares = [(1, parties[0].get_share_by_name("r_l")), (4, parties[3].get_share_by_name("a_l"))]
+    print(selected_shares)
+    coefficients = computate_coefficients(selected_shares, 1013)
+    opened = reconstruct_secret(selected_shares, coefficients, 1013)
+    print("opened r_l = ", opened)
+
     xor_shares(parties, "a_l", "r_l", "res")
     reset_parties(parties)
     xor_shares(parties, "res", "Z", "res")

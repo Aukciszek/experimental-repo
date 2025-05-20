@@ -46,7 +46,7 @@ def setup_parties(n, t, d, s, p, k, l, r=None):
     for shares_of_bit in shares_of_bits_of_r:
         for i in range(n):
             shares_for_clients[i].append(shares_of_bit[i])
-    # print(f"shares_for_clients {shares_for_clients}")
+    print(f"shares_for_clients {shares_for_clients}")
 
     # Create parties
     parties = []
@@ -70,6 +70,13 @@ def setup_parties(n, t, d, s, p, k, l, r=None):
         party.set_shares("d_share", shares_d[i][1])
         party.set_random_number_bit_shares(shares_for_clients[i])
         party.calculate_share_of_random_number()
+
+
+    selected_shares = [(1,parties[0].get_share_by_name("s_share")),(4,parties[3].get_share_by_name("s_share"))]
+    print(selected_shares)
+    coefficients = computate_coefficients(selected_shares, p)
+    opened = reconstruct_secret(selected_shares, coefficients, p)
+    print("opened = ", opened)
 
     return parties, bits_of_r
 
@@ -176,33 +183,15 @@ def main():
 
 
 def main2():
-    e1, r1 = compare_with_less_prints(n=5, t=2, d=5, s=6, p=61, k=1, l=3, r=50)
-    print(e1 % 61, r1 % 61)
-    e1, r1 = compare_with_less_prints(n=5, t=2, d=6, s=5, p=61, k=1, l=3, r=50)
-    print(e1 % 61, r1 % 61)
-
-
-def main3():
-    l = 2
-    k = 1
-    p = 5
-    licznik_zlych = 0
-    for random_number in range(0, 2 ** l + k):
-        for d in range(2 ** l):
-            for s in range(2 ** l):
-                expected_result = (d >= s)
-                result = compare(n=3, t=1, d=d, s=s, p=p, k=k, l=l, r=random_number)
-                if (expected_result != result % p):
-                    licznik_zlych += 1
-                    print("zle")
-                print("\n", "-" * 100, "\n")
-    print("liczniek_zlych", licznik_zlych)
-
+    r=compare(n=5, t=2, d=5, s=6, p=1013, k=1, l=3, r=31)
+    print(5>=6, r)
+    # r = compare(n=3, t=1, d=6, s=5, p=29, k=1, l=3, r=61)
+    # print(6 >= 5, r)
 
 def petla(n, t, p, k, l):
     print(f"n {n} t {t} l {l} k {k} p {p}")
     licznik_zlych = 0
-    for random_number in range(0, 2 ** l + k):
+    for random_number in range(0, 2 ** (l+k+1)):
         for d in range(2 ** l):
             for s in range(2 ** l):
                 expected_result = (d >= s)
@@ -211,20 +200,19 @@ def petla(n, t, p, k, l):
                     licznik_zlych += 1
                     # print("zle")
                 # print("\n", "-" * 100, "\n")
-    print("licznik_zlych", licznik_zlych, "/", (2 ** l + k) * (2 ** l) * (2 ** l))
+    print("licznik_zlych", licznik_zlych, "/", (2 ** (l + k+1)) * (2 ** l) * (2 ** l))
 
 
 def main4():
-    petla(n=3, t=1, p=5, k=1, l=2)
+    petla(n=3, t=1, p=29, k=1, l=3)
     petla(n=3, t=1, p=7, k=1, l=2)
-    petla(n=3, t=1, p=13, k=1, l=3)
-    petla(n=5, t=1, p=7, k=1, l=2)
-    petla(n=5, t=2, p=7, k=1, l=2)
-    petla(n=5, t=2, p=13, k=1, l=3)
+    petla(n=3, t=1, p=1013, k=1, l=3)
+    petla(n=5, t=1, p=1013, k=1, l=2)
+    petla(n=5, t=2, p=1013, k=1, l=2)
+    petla(n=5, t=2, p=1013, k=1, l=3)
 
 
 if __name__ == "__main__":
     # main()
-    # main2()
-    # main3()
-    main4()
+    main2()
+    #main4()
