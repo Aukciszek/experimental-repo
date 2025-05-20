@@ -4,6 +4,21 @@ import sys
 from comparison import *
 
 
+def reconstruct_from_shares_by_share_name(n, t, p, parties, share_name: str):
+    indeksy = [_ for _ in range(n)]
+    wybrane_indeksy = []
+    for _ in range(t):
+        w = random.choice(indeksy)
+        wybrane_indeksy.append(w)
+        indeksy.remove(w)
+    selected_shares = [(i + 1, parties[i].get_share_by_name(share_name)) for i in wybrane_indeksy]
+    coefficients = computate_coefficients(selected_shares, p)
+    opened = reconstruct_secret(selected_shares, coefficients, p)
+    print(f"opened {share_name} = {opened}")
+
+    return opened
+
+
 def setup_parties(n, t, d, s, p, k, l, r=None):
     """
     Args:
@@ -22,19 +37,19 @@ def setup_parties(n, t, d, s, p, k, l, r=None):
     shares_s = Shamir(t, n, s, p)
     print("s:", s, "| shares_s:", shares_s)
 
-    # r dlugosci l+k+2 bitow
+    # r dlugosci l+k+1 bitow
     # od najnizszej potegi
     if r is None:
-        bits_of_r = [random.randint(0, 1) for _ in range(l + k + 2)]
+        bits_of_r = [random.randint(0, 1) for _ in range(l + k + 1)]
     else:
         bits_of_r = binary(r)
-        while len(bits_of_r) < l + k + 2:
+        while len(bits_of_r) < l + k + 1:
             bits_of_r.append(0)
-    oryginalne_r = sum([bits_of_r[i] * pow(2, i) for i in range(l + k + 2)])
+    oryginalne_r = sum([bits_of_r[i] * pow(2, i) for i in range(l + k + 1)])
     print(f"r: {oryginalne_r} | bits of r: {bits_of_r}")
 
     shares_of_bits_of_r = []
-    for i in range(l + k + 2):
+    for i in range(l + k + 1):
         new_r_bit = bits_of_r[i]
         shares_new_r_bit = Shamir(t, n, new_r_bit, p)
         # print(shares_new_r_bit)
@@ -71,18 +86,22 @@ def setup_parties(n, t, d, s, p, k, l, r=None):
         party.set_random_number_bit_shares(shares_for_clients[i])
         party.calculate_share_of_random_number()
 
+    # # test reconstruction of compared numbers
+    # reconstruct_from_shares_by_share_name(n, t, p, parties, "s_share")
 
-    selected_shares = [(1,parties[0].get_share_by_name("s_share")),(4,parties[3].get_share_by_name("s_share"))]
-    print(selected_shares)
-    coefficients = computate_coefficients(selected_shares, p)
-    opened = reconstruct_secret(selected_shares, coefficients, p)
-    print("opened = ", opened)
+    # # test reconstruction of random bit shares
+    # for i in range(len(shares_of_bits_of_r)):
+    #     bit = shares_of_bits_of_r[i]
+    #     selected_shares = [parties[0].get_random_number_bit_share(i), parties[3].get_random_number_bit_share(i)]
+    #     print(selected_shares)
+    #     coefficients = computate_coefficients(selected_shares, p)
+    #     opened = reconstruct_secret(selected_shares, coefficients, p)
+    #     print(bit, "opened = ", opened)
 
     return parties, bits_of_r
 
 
 def compare(n, t, d, s, p, k, l, r=None):
-    #
     parties, bits_of_r = setup_parties(n, t, d, s, p, k, l, r)
 
     # Calculate comparison a
@@ -98,7 +117,6 @@ def compare(n, t, d, s, p, k, l, r=None):
     for i in range(n):
         party = parties[i]
         a_comparison_share[i] = (i + 1, party.get_comparison_a())
-
     # Select shares for reconstruction
     indeksy = [_ for _ in range(n)]
     wybrane_indeksy = []
@@ -107,12 +125,12 @@ def compare(n, t, d, s, p, k, l, r=None):
         wybrane_indeksy.append(w)
         indeksy.remove(w)
     selected_shares = [a_comparison_share[_] for _ in wybrane_indeksy]
-    # print(selected_shares)
+    # reconstruct a
     coefficients = computate_coefficients(selected_shares, p)
     opened_a = reconstruct_secret(selected_shares, coefficients, p)
-    # print("opened_a = ", opened_a)
+    # get bits of a
     a_bin = binary(opened_a)
-    while len(a_bin) < l + k:
+    while len(a_bin) < l + k + 1:
         a_bin.append(0)
     comparison_a_bits = a_bin
     print(f"a {opened_a} \t{comparison_a_bits}")
@@ -123,30 +141,17 @@ def compare(n, t, d, s, p, k, l, r=None):
     # d < s   -->  res=0
     comparison(parties, opened_a, l, k)
 
-    # Select shares for reconstruction
-    indeksy = [_ for _ in range(n)]
-    wybrane_indeksy = []
-    for _ in range(t):
-        w = random.choice(indeksy)
-        wybrane_indeksy.append(w)
-        indeksy.remove(w)
-    selected_shares = [(i, parties[i].get_share_by_name("res")) for i in wybrane_indeksy]
-    # print(selected_shares)
-    # Reconstruct res
-    coefficients = computate_coefficients(selected_shares, p)
-    result = reconstruct_secret(selected_shares, coefficients, p)
-
+    # get comparison result
+    result = reconstruct_from_shares_by_share_name(n, t, p, parties, "res")
     print("wynik porównania:", result)
 
     return result
 
 
-# Disable
 def block_print():
     sys.stdout = open(os.devnull, 'w')
 
 
-# Restore
 def enable_print():
     sys.stdout = sys.__stdout__
 
@@ -161,58 +166,71 @@ def compare_with_less_prints(n, t, d, s, p, k, l, r=None):
     return result
 
 
-def main():
-    p = 61
-    counter = 0
-    for i in range(0, 2 ** 6):
-        e1, r1 = compare_with_less_prints(n=3, t=1, d=5, s=6, p=61, k=1, l=3, r=i)
-        e2, r2 = compare_with_less_prints(n=3, t=1, d=6, s=5, p=61, k=1, l=3, r=i)
-        if e1 % p != r1 % p or e2 % p != r2 % p:
-            # print(i,binary(i))
-            counter += 1
-    print(counter, 2 ** 6)
-
-    counter = 0
-    for i in range(0, 2 ** 6):
-        e1, r1 = compare_with_less_prints(n=3, t=1, d=0, s=7, p=61, k=1, l=3, r=i)
-        e2, r2 = compare_with_less_prints(n=3, t=1, d=7, s=0, p=61, k=1, l=3, r=i)
-        if e1 % p != r1 % p or e2 % p != r2 % p:
-            # print(i, binary(i))
-            counter += 1
-    print(counter, 2 ** 6)
-
-
 def main2():
-    r=compare(n=5, t=2, d=5, s=6, p=1013, k=1, l=3, r=31)
-    print(5>=6, r)
-    # r = compare(n=3, t=1, d=6, s=5, p=29, k=1, l=3, r=61)
-    # print(6 >= 5, r)
+    result = compare(n=5, t=2, d=5, s=6, p=61, k=1, l=3, r=30)
+    print(f"expected = {int(5 >= 6)}, result = {result}")
+
 
 def petla(n, t, p, k, l):
     print(f"n {n} t {t} l {l} k {k} p {p}")
+    # 2^(l+k+1) - r + 2^l + d - s
+    duza_potega = 2 ** (l + k + 1)
+    # jesli random number jest wiekszy niz duza potega, a moze byc ujemne
+    liczba_bitow_random_number = l + k + 1
+    zakres_random_number = (0, 2 ** liczba_bitow_random_number - 1)
+    mala_potega = 2 ** l
+    zakres_porownywanych_liczb = (0, mala_potega - 1)
+    # a (i niezaciemnione a?) musi byc mniejsze niz p inaczej nie wychodzi
+    zakres_niezaciemnionego_a = (
+        (
+                duza_potega
+                + mala_potega
+                + zakres_porownywanych_liczb[0]
+                - zakres_porownywanych_liczb[1]
+        ),
+        (
+                duza_potega
+                + mala_potega
+                + zakres_porownywanych_liczb[1]
+                - zakres_porownywanych_liczb[0]
+        )
+    )
+    zakres_a = (
+        zakres_niezaciemnionego_a[0] - zakres_random_number[1],
+        zakres_niezaciemnionego_a[1] - zakres_random_number[0])
+    print(
+        f"zakres niezaciemnionego a {zakres_niezaciemnionego_a}, zakres random number {zakres_random_number}, zakres a {zakres_a}")
+    if p <= zakres_a[1]:
+        print(f"uwaga, liczba pierwsza moze byc mniejsza niz a: {p} <= {zakres_a[1]}")
+
+    licznik = 0
     licznik_zlych = 0
-    for random_number in range(0, 2 ** (l+k+1)):
-        for d in range(2 ** l):
-            for s in range(2 ** l):
+    for random_number in range(zakres_random_number[0], zakres_random_number[1] + 1):
+        for d in range(zakres_porownywanych_liczb[0], zakres_porownywanych_liczb[1] + 1):
+            for s in range(zakres_porownywanych_liczb[0], zakres_porownywanych_liczb[1] + 1):
                 expected_result = (d >= s)
                 result = compare_with_less_prints(n=n, t=t, d=d, s=s, p=p, k=k, l=l, r=random_number)
                 if (expected_result != result % p):
                     licznik_zlych += 1
                     # print("zle")
+                licznik += 1
                 # print("\n", "-" * 100, "\n")
-    print("licznik_zlych", licznik_zlych, "/", (2 ** (l + k+1)) * (2 ** l) * (2 ** l))
+    print("licznik_zlych", licznik_zlych, "/", licznik)
 
 
 def main4():
-    petla(n=3, t=1, p=29, k=1, l=3)
-    petla(n=3, t=1, p=7, k=1, l=2)
-    petla(n=3, t=1, p=1013, k=1, l=3)
-    petla(n=5, t=1, p=1013, k=1, l=2)
-    petla(n=5, t=2, p=1013, k=1, l=2)
-    petla(n=5, t=2, p=1013, k=1, l=3)
+    # petla(n=3, t=1, p=29, k=1, l=3)
+
+    petla(n=5, t=2, p=43, k=1, l=3)
+    petla(n=5, t=2, p=47, k=1, l=3)
+    petla(n=5, t=2, p=53, k=1, l=3)
+    petla(n=5, t=2, p=61, k=1, l=3)
+
+    petla(n=7,t=3,p=1013,k=1,l=7)
 
 
 if __name__ == "__main__":
     # main()
+    main4()
+    print("\n", "-" * 200, "\n")
     main2()
-    #main4()

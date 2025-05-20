@@ -125,8 +125,6 @@ class Party:
                 sum([self.__shared_r[i] for i in range(self.__n)]) % self.__p
         )
 
-        # print("muti",self.__multiplicative_share)
-
     def get_multiplicative_share(self):
         return self.__multiplicative_share
 
@@ -137,13 +135,13 @@ class Party:
         first_share = self.__shares[first_share_name]
         second_share = self.__shares[second_share_name]
 
-        self.__additive_share = first_share + second_share
+        self.__additive_share = (first_share + second_share) % self.__p
 
     def get_additive_share(self):
         return self.__additive_share
 
     def calculate_xor_share(self):
-        self.__xor_share = self.__additive_share - 2 * self.__multiplicative_share
+        self.__xor_share = (self.__additive_share - 2 * self.__multiplicative_share) % self.__p
 
     def get_xor_share(self):
         return self.__xor_share
@@ -205,7 +203,7 @@ class Party:
             value_of_share_r = multiplied_shares[0][1]
             for i in range(1, len(multiplied_shares)):
                 value_of_share_r += multiplied_shares[i][1]
-            return (party_id, value_of_share_r)
+            return (party_id, value_of_share_r % self.__p)  # r musi byc mniejsze niz p inaczej nie wychodzi
 
         if self.__random_number_share is not None:
             raise ValueError("Share of random number already calculated.")
@@ -214,7 +212,6 @@ class Party:
         share_of_random_number = add_multiplied_shares(pom)
 
         self.__random_number_share = share_of_random_number
-        # print("share of random number",share_of_random_number)
 
     def get_random_number_share(self):
         return self.__random_number_share
@@ -232,7 +229,7 @@ class Party:
                 + pow(2, l)
                 + first_share
                 - second_share
-        )
+        )  # nie modulowac !
 
     def get_comparison_a(self):
         return self.__comparison_a
@@ -244,28 +241,23 @@ class Party:
             a_bin.append(0)
         self.__comparison_a_bits = a_bin
 
-        # if self.__id == 1:
-        #     print("a", opened_a, "\t", self.__comparison_a_bits)
-
         self.__z_table = [None for _ in range(l)]
         self.__Z_table = [None for _ in range(l)]
 
-        for i in range(l-1, -1, -1):
-            self.__z_table[i] = self.__comparison_a_bits[i]  # XOR self.__random_number_bit_shares[i][1]
+        for i in range(l - 1, -1, -1):
+            self.__z_table[i] = self.__comparison_a_bits[i]  # pozniej XOR z self.__random_number_bit_shares[i][1]
             self.__Z_table[i] = self.__comparison_a_bits[i]
-
-        # if self.__id == 1:
-        #     print("z", self.__z_table)
-        #     print("Z", self.__Z_table)
 
     def initialize_z_and_Z(self, l):
         self.set_shares("z", self.__z_table[l - 1])
         self.set_shares("Z", self.__Z_table[l - 1])
 
+    # najpierw zZ[l-1] ◇ zZ[l-2], potem wynik ◇ zZ[l-3], ... , wynik ◇ zZ[0]
+    # na koniec dodatkowo wynik ◇ (0|0)
     def prepare_for_next_romb(self, index):
         self.set_shares("x", self.get_share_by_name("z"))
         self.set_shares("X", self.get_share_by_name("Z"))
-        if (index == 0):
+        if index == 0:
             # prepare for last romb
             self.set_shares("y", 0)
             self.set_shares("Y", 0)
@@ -273,15 +265,16 @@ class Party:
             self.set_shares("y", self.__z_table[index - 1])
             self.set_shares("Y", self.__Z_table[index - 1])
 
-    ### do operacji arytmetycznyw w ramach rombu
+    ### do operacji arytmetycznych w ramach rombu
 
+    # zwykle dodawanie ale bitow a z sherami bitow r
     def calculate_additive_share_of_z_table_arguments(self, index):
         first_share = self.__comparison_a_bits[index]
         second_share = self.__random_number_bit_shares[index][1]
 
-        self.__additive_share = first_share + second_share
-        # print("adytyw",self.__additive_share)
+        self.__additive_share = (first_share + second_share) % self.__p
 
+    # zwykle mnozenie ale bitow a z sherami bitow r
     def calculate_r_of_z_table_arguments(self, index):
         if self.__r is not None:
             raise ValueError("r already calculated.")
@@ -301,11 +294,7 @@ class Party:
             self.__r[i] = (multiplied_shares * self.__A[self.__id - 1][i]) % self.__p
 
     def set_z_table_to_xor_share(self, index):
-        # print(self.__xor_share)
         self.__z_table[index] = self.__xor_share
-        if index==0:
-            print(self.__id,self.__z_table[index])
-        # print(self.__z_table[index])
 
     ### do obliczenia wyniku porownania
     # [res] = a_l XOR [r_l] XOR [Z]
@@ -314,18 +303,21 @@ class Party:
         self.set_shares("a_l", self.__comparison_a_bits[comparison_a_bit_index])
         self.set_shares("r_l", self.__random_number_bit_shares[random_number_bit_share_index][1])
 
+    ### testowe printy
+
     def print_test_1(self):
-        print("z",self.__id, self.get_share_by_name("z"), "Z",
-              self.get_share_by_name("Z"))  # ,self.__z_table,self.__Z_table)
+        print(f"udzialy party {self.__id}:", "z", self.__id, self.get_share_by_name("z"), "Z",
+              self.get_share_by_name("Z"))
 
     def print_test_2(self):
-        print(self.__id,"x", self.get_share_by_name("x"), "y", self.get_share_by_name("y"), "X", self.get_share_by_name("X"), "Y",
+        print(f"udzialy party {self.__id}:", "x", self.get_share_by_name("x"), "y", self.get_share_by_name("y"), "X",
+              self.get_share_by_name("X"), "Y",
               self.get_share_by_name("Y"))
 
     def print_test_3(self):
-        print("a_l", self.get_share_by_name("a_l"), "r_l", self.get_share_by_name("r_l"), "Z",
+        print(f"udzialy party {self.__id}:", "a_l", self.get_share_by_name("a_l"), "r_l", self.get_share_by_name("r_l"),
+              "Z",
               self.get_share_by_name("Z"), "res", self.get_share_by_name("res"))
 
     def print_test_z_tables(self):
-        print("z", self.__z_table)
-        print("Z", self.__Z_table)
+        print(f"udzialy party {self.__id}: z {self.__z_table} Z {self.__Z_table}")
