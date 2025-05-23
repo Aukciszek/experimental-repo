@@ -30,6 +30,12 @@ class Party:
         self.__z_table = None
         self.__Z_table = None
         self.__comparison_a_bits = []
+        # zmienne do random bit
+        self.__part_of_u = None  # to co sam losuje
+        self.__shared_part_of_u = [None] * n  # to co dostaje od innych
+
+    def get_id(self):
+        return self.__id
 
     def set_shares(self, share_name: str, share):
         self.__shares[share_name] = share
@@ -188,6 +194,11 @@ class Party:
             self.__random_number_bit_shares.append(s)
             # [(n, n-ty share 1 bitu), (n, n-ty share 2 bitu), ...]
 
+    def set_random_number_bit_share_to_temporary_random_bit_share(self, bit_index):
+        while len(self.__random_number_bit_shares) < bit_index + 1:
+            self.__random_number_bit_shares.append(None)
+        self.__random_number_bit_shares[bit_index] = (self.__id, self.get_share_by_name("temporary_random_bit"))
+
     def get_random_number_bit_share(self, index):
         return self.__random_number_bit_shares[index]
 
@@ -321,3 +332,26 @@ class Party:
 
     def print_test_z_tables(self):
         print(f"udzialy party {self.__id}: z {self.__z_table} Z {self.__Z_table}")
+
+    ### random bit
+
+    def calculate_part_of_u(self):
+        self.__part_of_u = Shamir(self.__t, self.__n, random.randint(1, self.__p), self.__p)
+
+    # set part_of_u to other parties
+    def _set_part_of_u(self, party_id, shared_part_of_u):
+        self.__shared_part_of_u[party_id - 1] = shared_part_of_u
+
+    # send part_of_u to other parties
+    def send_part_of_u(self):
+        for i in range(self.__n):
+            if i == self.__id - 1:
+                self.__shared_part_of_u[i] = self.__part_of_u[i]
+                continue
+            self.__parties[i]._set_part_of_u(self.__id, self.__part_of_u[i])
+
+    def calculate_u(self):
+        # receive part_of_u from other parties
+        part_of_u_s = [x[1] for x in self.__shared_part_of_u]
+        # save sum of part_of_u_s as a share of u
+        self.set_shares("u", sum(part_of_u_s) % self.__p)

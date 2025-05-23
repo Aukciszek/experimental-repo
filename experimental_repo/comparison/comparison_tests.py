@@ -226,8 +226,6 @@ def main4():
     petla(n=5, t=2, p=53, k=1, l=3)
     petla(n=5, t=2, p=61, k=1, l=3)
 
-    petla(n=7,t=3,p=1013,k=1,l=7)
-
 
 if __name__ == "__main__":
     # main()
