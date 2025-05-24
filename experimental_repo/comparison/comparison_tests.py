@@ -219,7 +219,7 @@ def petla(n, t, p, k, l):
 
 
 def main4():
-    # petla(n=3, t=1, p=29, k=1, l=3)
+    petla(n=5, t=2, p=7919, k=1, l=12)
 
     petla(n=5, t=2, p=43, k=1, l=3)
     petla(n=5, t=2, p=47, k=1, l=3)
