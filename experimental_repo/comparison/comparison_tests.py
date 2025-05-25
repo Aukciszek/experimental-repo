@@ -166,7 +166,7 @@ def compare_with_less_prints(n, t, d, s, p, k, l, r=None):
     return result
 
 
-def main2():
+def test_compare_1():
     result = compare(n=5, t=2, d=5, s=6, p=61, k=1, l=3, r=30)
     print(f"expected = {int(5 >= 6)}, result = {result}")
 
@@ -218,17 +218,138 @@ def petla(n, t, p, k, l):
     print("licznik_zlych", licznik_zlych, "/", licznik)
 
 
-def main4():
-    petla(n=5, t=2, p=7919, k=1, l=12)
-
+def test_petli():
     petla(n=5, t=2, p=43, k=1, l=3)
     petla(n=5, t=2, p=47, k=1, l=3)
     petla(n=5, t=2, p=53, k=1, l=3)
     petla(n=5, t=2, p=61, k=1, l=3)
 
 
+def czy_liczba_pierwsza_jest_dostatecznie_duża(l, k, p):
+    """
+    Sprawdzenie, czy p jest większa niż największe możliwe a.
+    Założenie 1: a = 2^(l+k+1) - r + 2^l + d - s
+    Założenie 2: liczba_bitow_random_number = l + k + 1
+    Założenie 3: r >= 0
+    Args:
+        l: liczba bitów porównywanych liczb <= l
+        k: parametr dodatkowy, liczba bitów losowego r = l + k + 1
+        p: liczba pierwsza
+    """
+    duza_potega = 2 ** (l + k + 1)
+    liczba_bitow_random_number = l + k + 1
+    zakres_random_number = (0, 2 ** liczba_bitow_random_number - 1)
+    mala_potega = 2 ** l
+    zakres_porownywanych_liczb = (0, mala_potega - 1)
+    # a musi byc mniejsze niz p
+    # niezaciemnione a nie musi byc mniejsze, o ile redukcja modulo nastepuje po wmieszaniu r
+    zakres_niezaciemnionego_a = (
+        (
+                duza_potega
+                + mala_potega
+                + zakres_porownywanych_liczb[0]
+                - zakres_porownywanych_liczb[1]
+        ),
+        (
+                duza_potega
+                + mala_potega
+                + zakres_porownywanych_liczb[1]
+                - zakres_porownywanych_liczb[0]
+        )
+    )
+    zakres_a = (
+        zakres_niezaciemnionego_a[0] - zakres_random_number[1],
+        zakres_niezaciemnionego_a[1] - zakres_random_number[0])
+    print(f"zakres porownywanych liczb {zakres_porownywanych_liczb}")
+    print(
+        f"zakres random number {zakres_random_number}, zakres niezaciemnionego a {zakres_niezaciemnionego_a}, zakres a {zakres_a}")
+
+    if p <= zakres_a[1]:
+        print(f"uwaga, liczba pierwsza moze byc mniejsza niz a: {p} <= {zakres_a[1]}")
+        return False
+    else:
+        print(f"liczba pierwsza jest dostatecznie wieksza od a: {p} > {zakres_a[1]}")
+        return True
+
+
+def minimalna_liczba_pierwsza(l, k):
+    """
+        - Zalozenie 1: a = 2^(l+k+1) - r + 2^l + d - s
+        - Zalozenie 2: liczba bitow losowego r = l + k + 1
+        - Zalozenie 3: r >= 0
+        Wtedy liczba pierwsza p >= 2^(l+k+1) + 2^(l+1)
+        Args:
+            l: liczba bitów porównywanych liczb <= l
+            k: parametr dodatkowy
+        """
+    return 2 ** (l + k + 1) + 2 ** (l + 1)
+
+
+def najwieksze_mozliwe_a(l, k):
+    """
+    Wyznaczenie najwiekszej mozliwej wartosci a (liczba pierwsza musi byc wieksza od a).
+    Zalozenie 1: a = 2^(l+k+1) - r + 2^l + d - s
+    Zalozenie 2: liczba_bitow_random_number = l + k + 1
+    Zalozenie 3: r >= 0
+    Args:
+        l: liczba bitów porównywanych liczb <= l
+        k: parametr dodatkowy, liczba bitów losowego r = l + k + 1
+    """
+    duza_potega = 2 ** (l + k + 1)
+    liczba_bitow_random_number = l + k + 1
+    zakres_random_number = (0, 2 ** liczba_bitow_random_number - 1)
+    mala_potega = 2 ** l
+    zakres_porownywanych_liczb = (0, mala_potega - 1)
+    # a musi byc mniejsze niz p
+    zakres_niezaciemnionego_a = (
+        (
+                duza_potega
+                + mala_potega
+                + zakres_porownywanych_liczb[0]
+                - zakres_porownywanych_liczb[1]
+        ),
+        (
+                duza_potega
+                + mala_potega
+                + zakres_porownywanych_liczb[1]
+                - zakres_porownywanych_liczb[0]
+        )
+    )
+    zakres_a = (
+        zakres_niezaciemnionego_a[0] - zakres_random_number[1],
+        zakres_niezaciemnionego_a[1] - zakres_random_number[0])
+
+    return zakres_a[1]
+
+
+def test_parametrow_1():
+    l, k, p = 3, 1, 53
+    print(f"l={l} k={k} p={p}")
+    print("liczba pierwsza musi byc wieksza od:", najwieksze_mozliwe_a(l, k))
+    print(czy_liczba_pierwsza_jest_dostatecznie_duża(l, k, p))
+
+    l, k, p = 5, 1, 2 ** 8
+    print("liczba pierwsza musi byc wieksza od:", najwieksze_mozliwe_a(l, k))
+    print(czy_liczba_pierwsza_jest_dostatecznie_duża(l, k, p))
+
+    l, k, p = 10, 1, 2 ** 13
+    print("liczba pierwsza musi byc wieksza od:", najwieksze_mozliwe_a(l, k))
+    print(czy_liczba_pierwsza_jest_dostatecznie_duża(l, k, p))
+
+    l, k, p = 20, 1, 2 ** 23
+    print("liczba pierwsza musi byc wieksza od:", najwieksze_mozliwe_a(l, k))
+    print(czy_liczba_pierwsza_jest_dostatecznie_duża(l, k, p))
+
+
+def main():
+    # test_petli()
+    # print("\n", "-" * 200, "\n")
+    # test_compare_1()
+    # print("\n", "-" * 200, "\n")
+    # test_compare_1()
+    # print("\n", "-" * 200, "\n")
+    test_parametrow_1()
+
+
 if __name__ == "__main__":
-    # main()
-    main4()
-    print("\n", "-" * 200, "\n")
-    main2()
+    main()
